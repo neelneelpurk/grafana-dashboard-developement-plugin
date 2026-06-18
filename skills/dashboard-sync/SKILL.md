@@ -13,8 +13,10 @@ are used). The Grafana base URL comes from the user's input or the `grafana_url`
 ## Open and authenticate once
 
 1. `browser_navigate` to the Grafana URL (the dashboard URL, or `${grafanaUrl}` directly).
-2. If a login page appears, fill username/password (`browser_type`/`browser_fill_form`) and
-   submit. The bundled example stack enables anonymous access, so this is usually skipped.
+2. If a login page appears, log in: use credentials the user already provided (or the example
+   stack's `admin` / `admin`); otherwise **ask the user for the username and password** before
+   proceeding. The bundled example stack enables anonymous access, so this is often skipped. The
+   browser is isolated, so log in again per session rather than persisting credentials.
 3. After this, the browser holds a session cookie that authorizes same-origin API calls — the
    basis for fetch/push below.
 

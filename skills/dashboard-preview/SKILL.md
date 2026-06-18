@@ -39,8 +39,11 @@ actually see. Do not infer the look from JSON or skip the browser.
    - `browser_navigate` to the dashboard URL with render params so the capture has a populated,
      deterministic time range and the Grafana chrome is hidden:
      `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`
-   - If Grafana shows a login page, fill username/password (`browser_type` / `browser_fill_form`)
-     and submit, then navigate again. The session cookie persists for the rest of the review.
+   - If Grafana shows a login page, log in: use credentials the user already provided (or the
+     example stack's `admin` / `admin`); otherwise **ask the user for the username and password**
+     before proceeding. Fill them (`browser_type` / `browser_fill_form`) and submit, then navigate
+     again. The browser runs isolated, so the session cookie lasts only for this review — that's
+     fine; just log in again next time rather than persisting credentials.
    - Let panels finish querying — `browser_wait_for` a few seconds, then `browser_snapshot` and
      confirm panel titles appear with no "No data" / "Datasource error" / "Query error" strings.
 
