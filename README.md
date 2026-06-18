@@ -51,10 +51,13 @@ Or load it directly for a session: `claude --plugin-dir /path/to/this/repo`.
 On enable you'll be prompted for `grafana_url`, `grafana_token`, and your preferred
 `sdk_language` (typescript / go / python). These feed the provision script and code generation.
 Two optional options let the Playwright browser reuse an existing Grafana login instead of
-prompting each time: `grafana_storage_state` (a saved session file — capture it with
-`skills/dashboard-preview/scripts/capture-session.sh`) and `grafana_cdp_endpoint` (connect to a
-running Chrome started with `--remote-debugging-port`). See the `dashboard-preview` skill's
-"Reusing a Chrome login" section.
+prompting each time — **this is how OIDC/SSO/SAML works**: you complete the SSO flow once in a
+real browser and Playwright reuses that session (it never drives the identity provider).
+`grafana_storage_state` is a saved session file (capture it with
+`skills/dashboard-preview/scripts/capture-session.sh` — complete the full SSO + MFA, then close
+the window); `grafana_cdp_endpoint` connects to a running Chrome you started with
+`--remote-debugging-port` and logged into. See the `dashboard-preview` skill's "Reusing a Chrome
+login" section.
 
 ## Quick start
 

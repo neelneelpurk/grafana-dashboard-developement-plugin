@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Capture a logged-in Grafana session into a Playwright storageState file.
-# Opens a real browser; log into Grafana by hand, then CLOSE the window to save.
+# Opens a real browser; log into Grafana by hand — including any OIDC/SSO/SAML redirect
+# and MFA — then CLOSE the window to save the authenticated session.
 #
 # Usage: capture-session.sh [grafana-login-url] [output.json]
 #   defaults: http://localhost:3000/login  ->  grafana-auth.json

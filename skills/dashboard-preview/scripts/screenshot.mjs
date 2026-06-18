@@ -83,17 +83,18 @@ if (opts.cookie?.length) {
 const page = await ctx.newPage();
 await page.goto(renderUrl, { waitUntil: 'networkidle' });
 
-// Handle a Grafana login page only if a reused session didn't already authenticate us.
+const reusedSession = Boolean(storageState || cdp || opts.cookie?.length);
+
+// Built-in Grafana username/password form (e.g. the local example stack). This only handles a
+// basic-auth form — it deliberately does NOT try to drive OIDC/SSO. For SSO, supply a reused
+// session instead (see the "still on login page" guidance below).
 const userField = page
   .locator('input[name="user"], input[data-testid="data-testid Username input field"], input[aria-label="Username input field"]')
   .first();
-if (await userField.count()) {
-  if (storageState || cdp || opts.cookie?.length) {
-    console.warn('WARNING: a reused session was supplied but Grafana still shows a login page — the session may be expired or for a different host.');
-  }
-  const passField = page
-    .locator('input[name="password"], input[data-testid="data-testid Password input field"], input[aria-label="Password input field"]')
-    .first();
+const passField = page
+  .locator('input[name="password"], input[data-testid="data-testid Password input field"], input[aria-label="Password input field"]')
+  .first();
+if (!reusedSession && (await userField.count()) && (await passField.count())) {
   await userField.fill(user);
   await passField.fill(pass);
   await page.locator('button[type="submit"], button[data-testid="data-testid Login button"]').first().click();
@@ -103,6 +104,23 @@ if (await userField.count()) {
 
 // Give panels time to run queries and render.
 await page.waitForTimeout(4000);
+
+// If we're still on a login/SSO page, a screenshot would just capture the login screen. Stop and
+// tell the user how to reuse a logged-in session — the only viable path for OIDC/SSO.
+if (/\/login(\/|\?|$)/.test(page.url()) || (await page.locator('a[href*="/login/"], a[href*="oauth"], a[href*="saml"], a[href*="oidc"]').count())) {
+  console.error('ERROR: not authenticated — still on the Grafana login/SSO page.');
+  if (reusedSession) {
+    console.error('The reused session looks expired or is for a different host. Re-capture it.');
+  } else {
+    console.error('This Grafana needs a login. For OIDC/SSO, log in interactively once and reuse that session:');
+    console.error('  1) ./capture-session.sh <grafana-url> grafana-auth.json   # complete the full SSO flow in the opened browser');
+    console.error('  2) re-run with:  --storage-state grafana-auth.json');
+    console.error('     (or use your live Chrome:  --cdp http://localhost:9222)');
+  }
+  if (connectedOverCdp) await page.close().catch(() => {});
+  else await browser.close();
+  process.exit(2);
+}
 
 const bodyText = await page.locator('body').innerText().catch(() => '');
 if (/No data|Datasource .*error|Query error/i.test(bodyText)) {

@@ -39,12 +39,18 @@ actually see. Do not infer the look from JSON or skip the browser.
    - `browser_navigate` to the dashboard URL with render params so the capture has a populated,
      deterministic time range and the Grafana chrome is hidden:
      `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`
-   - If Grafana shows a login page, log in: use credentials the user already provided (or the
-     example stack's `admin` / `admin`); otherwise **ask the user for the username and password**
-     before proceeding. Fill them (`browser_type` / `browser_fill_form`) and submit, then navigate
-     again. The browser runs isolated, so the session cookie lasts only for this review — that's
-     fine; just log in again next time rather than persisting credentials. To skip this prompt,
-     reuse an existing login — see "Reusing a Chrome login" below.
+   - If Grafana shows a login page, how you authenticate depends on the auth type:
+     - **OIDC / SSO / SAML (an external identity provider, possibly with MFA):** the automated
+       browser cannot drive this flow, and you must not try. Instead reuse a session the user
+       logged in with themselves — a captured storage-state file or their live Chrome over CDP
+       (see "Reusing a Chrome login" below). If neither is configured, ask the user to run
+       `capture-session.sh` (they complete the SSO flow once) or to start Chrome with a debug
+       port, rather than asking for a password.
+     - **Basic Grafana username/password form (e.g. the local example stack):** use credentials
+       the user provided (or the example's `admin` / `admin`), filling them with `browser_type` /
+       `browser_fill_form`. If unknown, ask the user.
+     The browser runs isolated, so a session lasts only for this review — that's fine; reuse a
+     saved/live session next time rather than persisting credentials.
    - Let panels finish querying — `browser_wait_for` a few seconds, then `browser_snapshot` and
      confirm panel titles appear with no "No data" / "Datasource error" / "Query error" strings.
 
@@ -77,20 +83,25 @@ image-renderer plugin is installed**: `GET /render/d/<uid>/<slug>?width=1600&hei
 This is a fallback, not the normal path — the browser session above is preferred for fidelity and
 interaction (variable selection, time-range changes).
 
-## Reusing a Chrome login (skip the password prompt)
+## Reusing a Chrome login (required for OIDC / SSO)
 
-By default the browser is isolated and you log in each session. To reuse an existing Grafana
-login instead, pick one of these — the bundled Playwright MCP and `screenshot.mjs` both honor
-them:
+By default the browser is isolated and you log in each session. **For OIDC/SSO/SAML auth this is
+the only workable path** — a human completes the full identity-provider flow (redirects, MFA)
+once in a real browser, and Playwright reuses the resulting session. The automated browser never
+drives the SSO flow itself. Pick one — the bundled Playwright MCP and `screenshot.mjs` both honor
+these:
 
-1. **Saved session file (recommended, portable).** Log in once and save the session:
+1. **Saved session file (recommended, portable; works with any SSO).** Log in once and save the
+   session:
    ```bash
    skills/dashboard-preview/scripts/capture-session.sh http://localhost:3000 grafana-auth.json
    ```
-   This opens a browser; log into Grafana, then close the window to write `grafana-auth.json`.
+   This opens a real browser; complete the **entire login — including the SSO/OIDC redirect and
+   MFA** — then close the window to write `grafana-auth.json` (cookies + tokens for the session).
    Reuse it by setting the `grafana_storage_state` plugin option (or `GRAFANA_STORAGE_STATE`) to
    its absolute path — the Playwright MCP then starts already authenticated. For the CLI:
-   `node screenshot.mjs <url> out.png --storage-state grafana-auth.json`.
+   `node screenshot.mjs <url> out.png --storage-state grafana-auth.json`. Re-capture when the
+   session expires.
 
 2. **Your live Chrome over CDP.** Start Chrome with a debug port and a dedicated profile, log in,
    then point Playwright at it:

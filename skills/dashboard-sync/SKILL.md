@@ -13,10 +13,12 @@ are used). The Grafana base URL comes from the user's input or the `grafana_url`
 ## Open and authenticate once
 
 1. `browser_navigate` to the Grafana URL (the dashboard URL, or `${grafanaUrl}` directly).
-2. If a login page appears, log in: use credentials the user already provided (or the example
-   stack's `admin` / `admin`); otherwise **ask the user for the username and password** before
-   proceeding. The bundled example stack enables anonymous access, so this is often skipped. The
-   browser is isolated, so log in again per session rather than persisting credentials.
+2. If a login page appears: for a basic Grafana username/password form, use the user's
+   credentials (or the example stack's `admin` / `admin`). For **OIDC/SSO/SAML**, do not try to
+   drive the identity-provider flow — reuse a session the user logged in with themselves (a
+   captured storage-state file or their live Chrome over CDP; see the `dashboard-preview` skill's
+   "Reusing a Chrome login"). The bundled example stack enables anonymous access, so login is
+   often skipped entirely.
 3. After this, the browser holds a session cookie that authorizes same-origin API calls — the
    basis for fetch/push below.
 
