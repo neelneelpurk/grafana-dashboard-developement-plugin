@@ -37,8 +37,9 @@ WAREHOUSES = ["us-east", "us-west", "eu-central", "ap-south"]
 
 def simulate():
     t0 = time.time()
-    for w in WAREHOUSES:
-        INVENTORY.labels(warehouse=w).set(random.randint(500, 5000))
+    inventory = {w: random.randint(500, 5000) for w in WAREHOUSES}
+    for w, v in inventory.items():
+        INVENTORY.labels(warehouse=w).set(v)
 
     while True:
         elapsed = time.time() - t0
@@ -70,7 +71,11 @@ def simulate():
         QUEUE_DEPTH.set(max(0, int(random.gauss(20 + 60 * wave, 10))))
         ACTIVE_CONNS.set(max(1, int(random.gauss(50 + 100 * wave, 15))))
         for w in WAREHOUSES:
-            INVENTORY.labels(warehouse=w).inc(random.randint(-5, 4))
+            # Drift down with sales, restock when low, so the gauge stays positive.
+            inventory[w] += random.randint(-5, 4)
+            if inventory[w] < 50:
+                inventory[w] += random.randint(200, 800)
+            INVENTORY.labels(warehouse=w).set(inventory[w])
 
         time.sleep(1)
 

@@ -18,11 +18,17 @@ const page = await ctx.newPage();
 
 await page.goto(renderUrl, { waitUntil: 'networkidle' });
 
-// Handle Grafana login if presented.
-if (await page.locator('input[name="user"]').count()) {
-  await page.fill('input[name="user"]', user);
-  await page.fill('input[name="password"]', pass);
-  await page.click('button[type="submit"]');
+// Handle Grafana login if presented. Selectors vary across Grafana versions, so try a few.
+const userField = page
+  .locator('input[name="user"], input[data-testid="data-testid Username input field"], input[aria-label="Username input field"]')
+  .first();
+if (await userField.count()) {
+  const passField = page
+    .locator('input[name="password"], input[data-testid="data-testid Password input field"], input[aria-label="Password input field"]')
+    .first();
+  await userField.fill(user);
+  await passField.fill(pass);
+  await page.locator('button[type="submit"], button[data-testid="data-testid Login button"]').first().click();
   await page.waitForLoadState('networkidle');
   await page.goto(renderUrl, { waitUntil: 'networkidle' });
 }

@@ -2,17 +2,27 @@
 // observability stack (examples/observability-stack). It uses the synthetic
 // "checkout" service metrics and lays out the four golden signals.
 //
-//   npm install @grafana/grafana-foundation-sdk tsx
-//   npx tsx checkout.ts > checkout.json
+//   npm install            # installs the SDK + tsx pinned in package.json
+//   npm run build          # writes checkout.json
 //   ../../skills/grafana-foundation-sdk/scripts/provision-dashboard.sh checkout.json
 //
-import { DashboardBuilder, RowBuilder } from '@grafana/grafana-foundation-sdk/dashboard';
+import {
+  DashboardBuilder,
+  RowBuilder,
+  ThresholdsConfigBuilder,
+  ThresholdsMode,
+} from '@grafana/grafana-foundation-sdk/dashboard';
 import { PanelBuilder as TimeSeries } from '@grafana/grafana-foundation-sdk/timeseries';
 import { PanelBuilder as Stat } from '@grafana/grafana-foundation-sdk/stat';
 import { PanelBuilder as Gauge } from '@grafana/grafana-foundation-sdk/gauge';
 import { PanelBuilder as BarGauge } from '@grafana/grafana-foundation-sdk/bargauge';
 import { DataqueryBuilder as PromQuery } from '@grafana/grafana-foundation-sdk/prometheus';
+import { ReduceDataOptionsBuilder } from '@grafana/grafana-foundation-sdk/common';
 import * as units from '@grafana/grafana-foundation-sdk/units';
+
+// Stat/gauge panels show the latest value.
+const lastValue = () =>
+  new ReduceDataOptionsBuilder().calcs(['lastNotNull']).fields('').values(false);
 
 // The example stack provisions a Prometheus datasource with uid "prometheus".
 const prom = { type: 'prometheus', uid: 'prometheus' };
@@ -30,7 +40,7 @@ const dashboard = new DashboardBuilder('Checkout — Golden Signals')
       .title('Requests / sec')
       .datasource(prom)
       .unit(units.RequestsPerSecond)
-      .reduceOptions({ calcs: ['lastNotNull'], fields: '', values: false })
+      .reduceOptions(lastValue())
       .withTarget(new PromQuery().expr('sum(rate(http_requests_total{service="checkout"}[1m]))'))
       .span(6).height(6),
   )
@@ -40,15 +50,14 @@ const dashboard = new DashboardBuilder('Checkout — Golden Signals')
       .datasource(prom)
       .unit(units.PercentUnit)
       .decimals(2)
-      .reduceOptions({ calcs: ['lastNotNull'], fields: '', values: false })
-      .thresholds({
-        mode: 'absolute',
-        steps: [
+      .reduceOptions(lastValue())
+      .thresholds(
+        new ThresholdsConfigBuilder().mode(ThresholdsMode.Absolute).steps([
           { value: null, color: 'green' },
           { value: 0.02, color: 'yellow' },
           { value: 0.05, color: 'red' },
-        ],
-      } as any)
+        ]),
+      )
       .withTarget(
         new PromQuery().expr(
           'sum(rate(http_requests_total{service="checkout",status=~"5.."}[1m])) / sum(rate(http_requests_total{service="checkout"}[1m]))',
@@ -62,14 +71,13 @@ const dashboard = new DashboardBuilder('Checkout — Golden Signals')
       .datasource(prom)
       .unit(units.Short)
       .min(0).max(150)
-      .thresholds({
-        mode: 'absolute',
-        steps: [
+      .thresholds(
+        new ThresholdsConfigBuilder().mode(ThresholdsMode.Absolute).steps([
           { value: null, color: 'green' },
           { value: 90, color: 'yellow' },
           { value: 120, color: 'red' },
-        ],
-      } as any)
+        ]),
+      )
       .withTarget(new PromQuery().expr('checkout_queue_depth'))
       .span(6).height(6),
   )
@@ -78,7 +86,7 @@ const dashboard = new DashboardBuilder('Checkout — Golden Signals')
       .title('Active connections')
       .datasource(prom)
       .unit(units.Short)
-      .reduceOptions({ calcs: ['lastNotNull'], fields: '', values: false })
+      .reduceOptions(lastValue())
       .withTarget(new PromQuery().expr('checkout_active_connections'))
       .span(6).height(6),
   )

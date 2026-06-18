@@ -51,9 +51,10 @@ Time series extras: `.lineWidth(n)`, `.fillOpacity(0..100)`, `.gradientMode(...)
 `.drawStyle(common.GraphDrawStyleLine)`, `.stacking(...)`, `.legend(builder)`,
 `.tooltip(builder)`.
 
-Stat/gauge extras: `.reduceOptions({calcs:["lastNotNull"], fields:"", values:false})`,
-`.colorMode(common.BigValueColorModeValue)`, `.graphMode(common.BigValueGraphModeArea)`,
-`.orientation(common.VizOrientationAuto)`.
+Stat/gauge extras: `.reduceOptions(new common.ReduceDataOptionsBuilder().calcs(["lastNotNull"]).fields("").values(false))`,
+`.colorMode(common.BigValueColorMode.Value)`, `.graphMode(common.BigValueGraphMode.Area)`,
+`.orientation(common.VizOrientation.Auto)`. Nested objects take **builders**, not plain
+objects — `.reduceOptions(...)` and `.thresholds(...)` will fail if handed a raw object.
 
 ## Queries
 
@@ -129,14 +130,13 @@ dashboard.NewQueryVariableBuilder("job").
 
 ## Thresholds
 
-TS:
+TS (`ThresholdsConfigBuilder` and `ThresholdsMode` both come from the `dashboard` module):
 ```typescript
-import { ThresholdsConfigBuilder } from '@grafana/grafana-foundation-sdk/dashboard';
-import * as common from '@grafana/grafana-foundation-sdk/common';
+import { ThresholdsConfigBuilder, ThresholdsMode } from '@grafana/grafana-foundation-sdk/dashboard';
 
 .thresholds(
   new ThresholdsConfigBuilder()
-    .mode(common.ThresholdsMode.Absolute)
+    .mode(ThresholdsMode.Absolute)
     .steps([
       { value: null, color: 'green' },
       { value: 70,   color: 'yellow' },
@@ -145,11 +145,22 @@ import * as common from '@grafana/grafana-foundation-sdk/common';
 )
 ```
 
-## Common units (`units.*`)
+## Common units
 
-`Percent` (0–100), `PercentUnit` (0–1), `Seconds`, `Milliseconds`, `Short`, `Bytes`,
-`BytesSI`, `BitsPerSecondSI`, `RequestsPerSecond`, `OpsPerSecond`, `Dollars`. When unsure,
-use `units.Short` rather than leaving a panel unitless.
+TS & Go expose a `units` module of named constants; **Python takes the raw unit string** that
+each constant maps to. Don't leave a numeric panel unitless — use `short` when unsure.
+
+| Meaning | TS / Go (`units.*`) | Python / raw string |
+| --- | --- | --- |
+| Percent 0–100 | `Percent` | `"percent"` |
+| Percent 0–1 | `PercentUnit` | `"percentunit"` |
+| Seconds | `Seconds` | `"s"` |
+| Milliseconds | `Milliseconds` | `"ms"` |
+| Generic number | `Short` | `"short"` |
+| Bytes (IEC) | `Bytes` | `"bytes"` |
+| Bits/sec (SI) | `BitsPerSecondSI` | `"bps"` |
+| Requests/sec | `RequestsPerSecond` | `"reqps"` |
+| Ops/sec | `OpsPerSecond` | `"ops"` |
 
 ## Gotchas
 

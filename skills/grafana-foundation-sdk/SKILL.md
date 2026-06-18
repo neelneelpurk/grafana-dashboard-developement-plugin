@@ -38,15 +38,16 @@ concepts, language-idiomatic naming (`new DashboardBuilder(...)` / `.withPanel()
 npm install @grafana/grafana-foundation-sdk
 
 # Go
-go get github.com/grafana/grafana-foundation-sdk/go@v11.6.0+cog.4   # match your Grafana
+go get github.com/grafana/grafana-foundation-sdk/go@latest   # then pin to match your Grafana
 
 # Python
 pip install grafana-foundation-sdk
 ```
 
-The SDK is versioned to match Grafana releases (e.g. `@grafana/grafana-foundation-sdk@11.x`,
-`grafana-foundation-sdk/go@v11.x`, `grafana-foundation-sdk` 11.x on PyPI). Pin the version to
-the target Grafana to avoid schema drift.
+The SDK is versioned to match Grafana releases (TS on npm and Python on PyPI use plain semver
+like `11.6.0`; the Go module tags carry build metadata, e.g. `v11.6.0+cog.4`). Pin to the
+target Grafana version to avoid schema drift — resolve the exact tag with
+`go list -m -versions github.com/grafana/grafana-foundation-sdk/go`.
 
 ## TypeScript builder pattern
 
@@ -54,7 +55,11 @@ Each resource type lives in its own subpath: `dashboard`, `timeseries`, `stat`, 
 `table`, `prometheus`, `loki`, `common`, `units`.
 
 ```typescript
-import { DashboardBuilder, RowBuilder } from '@grafana/grafana-foundation-sdk/dashboard';
+import {
+  DashboardBuilder,
+  RowBuilder,
+  DatasourceVariableBuilder,
+} from '@grafana/grafana-foundation-sdk/dashboard';
 import { PanelBuilder as TimeSeries } from '@grafana/grafana-foundation-sdk/timeseries';
 import { PanelBuilder as Stat } from '@grafana/grafana-foundation-sdk/stat';
 import { DataqueryBuilder as PromQuery } from '@grafana/grafana-foundation-sdk/prometheus';
@@ -70,7 +75,7 @@ const dashboard = new DashboardBuilder('Service Overview')
   .time({ from: 'now-6h', to: 'now' })
   .timezone(common.TimeZoneBrowser)
   // A datasource template variable so the board is portable
-  .withVariable(/* see reference.md for QueryVariableBuilder */ undefined as any)
+  .withVariable(new DatasourceVariableBuilder('datasource').type('prometheus').label('Data source'))
   .withRow(new RowBuilder('Golden signals'))
   .withPanel(
     new Stat()
@@ -78,7 +83,7 @@ const dashboard = new DashboardBuilder('Service Overview')
       .datasource(prometheus)
       .unit(units.RequestsPerSecond)
       .withTarget(new PromQuery().expr('sum(rate(http_requests_total[5m]))'))
-      .reduceOptions({ calcs: ['lastNotNull'], fields: '', values: false })
+      .reduceOptions(new common.ReduceDataOptionsBuilder().calcs(['lastNotNull']).fields('').values(false))
       .span(6).height(8),
   )
   .withPanel(
@@ -185,10 +190,10 @@ correctly.
 ```python
 from grafana_foundation_sdk.builders import dashboard, timeseries, stat, prometheus
 from grafana_foundation_sdk.models.dashboard import DataSourceRef
-from grafana_foundation_sdk.models import units
 from grafana_foundation_sdk.models.common import TimeZoneBrowser
 from grafana_foundation_sdk.cog.encoder import JSONEncoder
 
+# Python takes unit names as raw strings (no units module): "reqps", "s", "short", "bytes"...
 ds = DataSourceRef(type_val="prometheus", uid="${datasource}")
 
 builder = (
@@ -203,7 +208,7 @@ builder = (
         stat.Panel()
         .title("Requests / sec")
         .datasource(ds)
-        .unit(units.RequestsPerSecond)
+        .unit("reqps")
         .with_target(
             prometheus.Dataquery().expr("sum(rate(http_requests_total[5m]))")
         )
@@ -213,7 +218,7 @@ builder = (
         timeseries.Panel()
         .title("Latency p95")
         .datasource(ds)
-        .unit(units.Seconds)
+        .unit("s")
         .min_val(0)
         .with_target(
             prometheus.Dataquery()

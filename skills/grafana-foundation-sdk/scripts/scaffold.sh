@@ -114,7 +114,6 @@ REQ
     cat > dashboard.py <<'PY'
 from grafana_foundation_sdk.builders import dashboard, timeseries, prometheus
 from grafana_foundation_sdk.models.dashboard import DataSourceRef
-from grafana_foundation_sdk.models import units
 from grafana_foundation_sdk.cog.encoder import JSONEncoder
 
 ds = DataSourceRef(type_val="prometheus", uid="${datasource}")
@@ -129,7 +128,7 @@ builder = (
         timeseries.Panel()
         .title("Example")
         .datasource(ds)
-        .unit(units.Short)
+        .unit("short")
         .with_target(prometheus.Dataquery().expr("vector(1)"))
     )
 )

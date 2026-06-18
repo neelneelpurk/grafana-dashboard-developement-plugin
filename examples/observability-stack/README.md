@@ -25,7 +25,12 @@ docker compose up -d
 docker compose down            # stop
 ```
 
-Give the sample app ~30s to produce enough history for `rate()` windows to look good.
+The `sample-app` container installs `prometheus_client` from PyPI on first start, so it needs
+outbound network and ~10–30s before its `/metrics` target comes up (Prometheus retries until
+then). Give the stack ~30s to produce enough history for `rate()` windows to look good.
+
+`node-exporter` mounts the host `/`, `/proc`, and `/sys` read-only so its metrics reflect the
+host (or the Docker VM on macOS/Windows), not the container.
 
 ## Metrics the sample app exposes
 
