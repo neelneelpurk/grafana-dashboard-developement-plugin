@@ -25,21 +25,29 @@ skill grades.
 
 ## Workflow
 
+The screenshot **always** comes from a real browser session that opens the Grafana dashboard.
+That is the point of this skill — open the dashboard in a browser and capture what a user would
+actually see. Do not infer the look from JSON or skip the browser.
+
 1. **Provision** the dashboard JSON:
    `skills/grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json`
-   The script prints the dashboard URL on success.
+   The script prints the dashboard URL on success. (If reviewing an existing dashboard from a
+   Grafana URL, skip this — you already have the URL.)
 
-2. **Render with data.** Append render params to the URL so a screenshot has a populated,
-   deterministic time range and the kiosk chrome is hidden:
-   `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`
+2. **Open a browser session (Playwright MCP).** This is the required path — refer to it as
+   "Playwright MCP" so the browser tools are used, not shell Playwright:
+   - `browser_navigate` to the dashboard URL with render params so the capture has a populated,
+     deterministic time range and the Grafana chrome is hidden:
+     `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`
+   - If Grafana shows a login page, fill username/password (`browser_type` / `browser_fill_form`)
+     and submit, then navigate again. The session cookie persists for the rest of the review.
+   - Let panels finish querying — `browser_wait_for` a few seconds, then `browser_snapshot` and
+     confirm panel titles appear with no "No data" / "Datasource error" / "Query error" strings.
 
-3. **Drive the browser (Playwright MCP):**
-   - `browser_navigate` to the Grafana dashboard URL. If Grafana shows a login page, fill
-     username/password (`browser_type`) and submit, then navigate again.
-   - Wait for panels to load — `browser_snapshot` and confirm panel titles appear and there are
-     no "No data" / "Datasource error" strings in the accessibility tree.
-   - `browser_take_screenshot` (full page) and save to `./previews/<uid>-overview.png`.
-   - For a focused view, screenshot individual panels by their bounding element where useful.
+3. **Take the screenshots in that session:**
+   - **Full page** → `browser_take_screenshot` saved to `./previews/<uid>.png`.
+   - **Per-panel / per-row** for anything notable → `./previews/<uid>-<panel>.png`.
+   - List every saved image and surface the key ones to the user (e.g. SendUserFile).
 
 4. **Sanity checks** before declaring success — report any that fail:
    - Every panel renders a value or series (no empty/"No data" panels).
@@ -50,12 +58,20 @@ skill grades.
 5. **Hand off** the screenshot paths plus the dashboard JSON to the
    `dashboard-quality-rubric` skill for scoring.
 
-## Capturing without a browser session (server-side render)
+### If Playwright MCP isn't available
 
-Grafana can render a panel/dashboard to PNG server-side if the image-renderer plugin is
-installed: `GET /render/d/<uid>/<slug>?width=1600&height=900&from=now-6h&to=now`. Use this when
-no interactive browser is available; otherwise prefer Playwright MCP for full-page fidelity and
-interaction (variable selection, time range changes).
+Run the bundled headless browser-session script, which does the same thing (opens the dashboard,
+logs in if needed, waits, screenshots):
+
+```bash
+node skills/dashboard-preview/scripts/screenshot.mjs \
+  "<dashboard-url>" ./previews/<uid>.png [user] [pass]
+```
+
+Only as a last resort, if no browser can run at all, Grafana can render server-side **when the
+image-renderer plugin is installed**: `GET /render/d/<uid>/<slug>?width=1600&height=900&from=now-6h&to=now`.
+This is a fallback, not the normal path — the browser session above is preferred for fidelity and
+interaction (variable selection, time-range changes).
 
 ## Notes
 
