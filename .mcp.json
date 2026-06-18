@@ -1,8 +1,13 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest", "--isolated"],
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/playwright-mcp.sh",
+      "args": [],
+      "env": {}
+    },
+    "grafana": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/grafana-mcp.sh",
+      "args": [],
       "env": {}
     }
   }

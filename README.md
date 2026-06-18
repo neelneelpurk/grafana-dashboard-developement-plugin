@@ -24,12 +24,18 @@ describe what to monitor
 | Skill | `grafana-foundation-sdk` | Build dashboards as code in **TypeScript, Go, or Python**; scaffold + provision scripts. |
 | Skill | `panel-selection-advisor` | Map the metrics you want to track to the right visualization. |
 | Skill | `dashboard-preview` | Provision to Grafana and screenshot with Playwright MCP/CLI. |
+| Skill | `dashboard-sync` | Fetch an existing dashboard from a Grafana URL and push one back — via Playwright. |
+| Skill | `grafana-admin` | Folders & dashboard lifecycle (create/move/delete) — Grafana MCP/CLI for token auth, Playwright for SSO. |
 | Skill | `dashboard-quality-rubric` | Yes/no rubric: renders with Playwright + checks code, returns PASS/FAIL + what to improve. |
 | Agent | `grafana-dashboard-architect` | End-to-end: design → build → preview → self-grade. |
 | Agent | `dashboard-taste-critic` | Independent, honest review against the rubric. |
 | Command | `/create-dashboard <what to monitor>` | Run the full build-and-verify loop. |
-| Command | `/review-dashboard <json / uid / "current">` | Grade an existing dashboard. |
-| MCP | `playwright` | Browser automation for rendering and screenshots. |
+| Command | `/update-dashboard <url or file> — <change>` | Fetch (Playwright), edit, push back, re-check. |
+| Command | `/review-dashboard <url / json / uid>` | Grade an existing dashboard (fetches from a URL via Playwright). |
+| Command | `/provision-dashboard <json> [url] [api\|playwright]` | Push a dashboard to Grafana via Playwright or the API. |
+| Command | `/grafana-admin <action> <args>` | Create/delete folders, move/delete dashboards. |
+| MCP | `playwright` | Browser automation for rendering, fetching, pushing, and screenshots. |
+| MCP | `grafana` | Official Grafana MCP for token-auth management (starts only when `grafana_token` is set). |
 | Example | `examples/observability-stack` | Grafana + Prometheus + synthetic metrics to test against. |
 | Example | `examples/checkout-dashboard` | A complete golden-signals dashboard built for that stack. |
 
@@ -47,6 +53,14 @@ Or load it directly for a session: `claude --plugin-dir /path/to/this/repo`.
 
 On enable you'll be prompted for `grafana_url`, `grafana_token`, and your preferred
 `sdk_language` (typescript / go / python). These feed the provision script and code generation.
+Two optional options let the Playwright browser reuse an existing Grafana login instead of
+prompting each time — **this is how OIDC/SSO/SAML works**: you complete the SSO flow once in a
+real browser and Playwright reuses that session (it never drives the identity provider).
+`grafana_storage_state` is a saved session file (capture it with
+`skills/dashboard-preview/scripts/capture-session.sh` — complete the full SSO + MFA, then close
+the window); `grafana_cdp_endpoint` connects to a running Chrome you started with
+`--remote-debugging-port` and logged into. See the `dashboard-preview` skill's "Reusing a Chrome
+login" section.
 
 ## Quick start
 
