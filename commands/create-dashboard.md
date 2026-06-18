@@ -19,8 +19,9 @@ Drive the full build-and-verify loop using this plugin's skills and agents:
 4. **Provision & preview** with the `dashboard-preview` skill: push it to Grafana
    (`provision-dashboard.sh`) and screenshot it with Playwright MCP. Confirm panels load with
    data; fix empty/error panels at the source and re-provision.
-5. **Grade** with the `dashboard-quality-rubric` skill and iterate on the weakest dimensions
-   until the dashboard scores at least Ship-ready (≥ 80).
+5. **Check** with the `dashboard-quality-rubric` skill — it renders with Playwright, checks the
+   code, and returns a yes/no PASS/FAIL verdict plus a "what to improve" summary. Apply the
+   fixes and re-run until the verdict is PASS.
 
 If no Grafana is running, offer the bundled `examples/observability-stack/` (Grafana +
 Prometheus + sample metrics) so the dashboard can be previewed against real data.

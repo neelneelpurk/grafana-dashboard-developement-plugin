@@ -1,69 +1,93 @@
 ---
 name: dashboard-quality-rubric
-description: Grade a Grafana dashboard against a quality-and-taste rubric and produce an actionable scorecard. Use after building and previewing a dashboard to score it across correctness, layout, visualization choice, readability, consistency, performance, and visual taste, then recommend the highest-impact fixes. Requires the dashboard JSON and (ideally) a Playwright screenshot from the dashboard-preview skill.
+description: Run a yes/no quality-and-taste check on a Grafana dashboard and produce a pass/fail verdict plus a "what to improve" summary. This skill is self-contained: it uses Playwright MCP to open the dashboard and take a screenshot, inspects the dashboard JSON and the Foundation SDK source, answers every rubric item yes or no, then summarizes the fixes. Use after building a dashboard, or whenever the user asks to review, grade, taste-test, or check a Grafana dashboard.
 ---
 
-# Dashboard quality & taste rubric
+# Dashboard quality & taste check (yes/no rubric)
 
 A dashboard can be schema-valid and still be bad: wrong viz, no units, unreadable at a glance,
-panels that don't load. This skill scores a dashboard against a fixed rubric and returns a
-scorecard with concrete fixes, so quality is judged consistently instead of by vibes.
+panels that don't load. This skill checks a dashboard against a **yes/no rubric** — every item
+is a plain pass or fail, no fuzzy 0–5 scoring — and returns a clear **PASS / FAIL** verdict with
+a **"what to improve"** summary listing each failed item and its fix.
+
+This skill runs the whole evaluation itself. It does not just read JSON — it drives Playwright to
+render the dashboard and it inspects the code, because taste and readability can only be judged
+from the rendered result, and correctness from the source.
 
 ## Inputs
 
-- **Required:** the dashboard JSON (Foundation SDK output or exported from Grafana).
-- **Strongly recommended:** a rendered screenshot from the `dashboard-preview` skill. Taste and
-  readability dimensions can only be judged honestly from the rendered result — grade those from
-  the screenshot, not from the JSON.
-- Optional: the user's intent (audience, purpose) to weight relevance.
+- The dashboard JSON (Foundation SDK output or exported from Grafana), and/or the dashboard
+  `uid`/URL on a running Grafana.
+- The Foundation SDK source that produced it (for the code check), when available.
 
-## How to grade
+## Run the check (do all of this)
 
-1. Read the rubric in `rubric.md` (this skill directory). It defines 8 weighted dimensions, each
-   scored 0–5 with explicit anchor descriptions.
-2. For each dimension, assign a 0–5 score grounded in **specific evidence** — cite the panel
-   title, the JSON field, or what you see in the screenshot. No score without a reason.
-3. Compute the weighted total out of 100. Map to a grade band (see rubric).
-4. Produce the scorecard in the format below.
-5. List fixes ordered by impact (weight × points lost). Be specific enough to act on
-   ("Panel 'Latency' has no unit — set `unit(units.Seconds)`"), not generic ("improve units").
-6. Offer to apply the top fixes via the `grafana-foundation-sdk` skill and re-grade. Treat one
-   build → preview → grade → fix loop as the unit of work; iterate until the score clears the
-   user's bar (default: ≥ 80 / "Ship-ready").
+### 1. Render and screenshot with Playwright MCP
 
-## Scoring honesty
+- Make sure the dashboard is provisioned into Grafana. If it isn't, provision it first with
+  `skills/grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json` (uses the
+  `grafana_url` / `grafana_token` plugin options). If no Grafana is running, start the bundled
+  `examples/observability-stack/` (`docker compose up -d`).
+- Use **Playwright MCP** (bundled in this plugin's `.mcp.json`) — refer to it as "Playwright MCP"
+  so the browser tools are used, not shell Playwright:
+  - `browser_navigate` to `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`. If a login page
+    appears, `browser_type` the credentials and submit, then navigate again.
+  - `browser_snapshot` to read the accessibility tree; confirm panel titles are present and scan
+    for "No data" / "Datasource error" / "Query error".
+  - `browser_take_screenshot` (full page) → save to `./previews/<uid>.png`. This screenshot is
+    the evidence for the visual rubric items.
 
-- Do not inflate. If there's no screenshot, say which dimensions you could not fully verify and
-  grade them conservatively from the JSON.
-- A dashboard with any panel showing "No data" or a datasource error cannot score above
-  "Needs work" overall, regardless of other dimensions — broken data is disqualifying.
-- Taste is real but must be defended: tie every taste deduction to a concrete, nameable issue
-  (clutter, inconsistent color, misleading axis), never "feels off".
+### 2. Check the code and JSON
 
-## Scorecard format
+- Read the dashboard JSON and the SDK source. Verify, in code: every panel has a `datasource`
+  and at least one target; units are set; a stable `uid` exists; template variables
+  (`${datasource}`, `${job}`) are used instead of hard-coded datasources; `rate()` windows and
+  aggregations are sane; no obviously high-cardinality unbounded queries.
+
+### 3. Answer the rubric
+
+- Open `rubric.md` (this skill directory). It is a flat list of **yes/no items**, each marked
+  **[critical]** or **[normal]**.
+- Answer every item **Yes** or **No** with one line of **specific evidence** — name the panel,
+  the JSON field, or what's visible in the screenshot. Never answer without a reason. If an item
+  truly cannot be checked (e.g. no screenshot was possible), mark it **N/A** and say why.
+
+### 4. Verdict
+
+Apply this rule exactly:
+
+> **PASS** only if **every [critical] item is Yes** AND **at most 2 [normal] items are No**.
+> Otherwise **FAIL**.
+
+A single critical "No" (e.g. a panel shows "No data") is an automatic FAIL.
+
+### 5. "What to improve" summary
+
+List every **No** (and any N/A worth resolving), critical items first, each as an actionable
+fix: name the panel and the exact change. If the verdict is PASS, still list any normal "No"s as
+optional polish. End with a one-sentence overall takeaway.
+
+## Output format
 
 ```
-# Dashboard Quality Scorecard — <dashboard title>
-Overall: <score>/100  ·  Grade: <band>  ·  Screenshot: <path or "none — JSON only">
+# Dashboard Quality Check — <title>
+Verdict: PASS ✅  |  FAIL ❌
+Screenshot: ./previews/<uid>.png   ·   Critical: <x>/<n> Yes   ·   Normal: <x>/<m> Yes
 
-| # | Dimension              | Weight | Score /5 | Weighted | Evidence |
-|---|------------------------|--------|----------|----------|----------|
-| 1 | Data correctness       |  20    |   x      |   xx     | ...      |
-| 2 | Visualization choice   |  15    |   x      |   xx     | ...      |
-| 3 | Layout & structure     |  15    |   x      |   xx     | ...      |
-| 4 | Readability at a glance|  15    |   x      |   xx     | ...      |
-| 5 | Units, thresholds, legends | 10 |   x      |   xx     | ...      |
-| 6 | Consistency            |  10    |   x      |   xx     | ...      |
-| 7 | Performance & query hygiene | 5 |   x      |   xx     | ...      |
-| 8 | Visual taste & polish  |  10    |   x      |   xx     | ...      |
+## Rubric
+[critical] Data loads in every panel (no "No data"/errors) ........... Yes — all 8 panels populated
+[critical] Each panel has a correct datasource + target ............... Yes — ...
+[critical] Correct visualization for each metric ...................... No  — "Queue" uses a pie chart for an unbounded gauge metric
+[normal]   Units set on every panel ................................... No  — "Latency" panel is unitless
+... (one line per rubric item) ...
 
-## Top fixes (highest impact first)
-1. ...
-2. ...
-3. ...
+## What to improve
+1. (critical) "Queue" panel → switch pie chart to a gauge with min/max; pies don't fit unbounded values.
+2. (normal)   "Latency" panel → set unit to seconds (`unit(units.Seconds)`).
+...
 
-## What's already good
-- ...
+Takeaway: <one sentence>.
 ```
 
-See `rubric.md` for the full dimension definitions, 0–5 anchors, and grade bands.
+After reporting, offer to apply the top fixes via the `grafana-foundation-sdk` skill and re-run
+this check. Treat build → preview → check → fix as one loop; iterate until the verdict is PASS.

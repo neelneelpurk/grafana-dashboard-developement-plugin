@@ -13,8 +13,8 @@ describe what to monitor
    → pick the right panels       (panel-selection-advisor skill)
    → build it as code            (grafana-foundation-sdk skill — TS / Go / Python)
    → provision + screenshot      (dashboard-preview skill — Playwright MCP)
-   → grade against a rubric      (dashboard-quality-rubric skill)
-   → fix the weakest dimensions and repeat until Ship-ready (≥ 80/100)
+   → yes/no quality check        (dashboard-quality-rubric skill — renders + checks code)
+   → apply the "what to improve" fixes and repeat until the verdict is PASS
 ```
 
 ## Components
@@ -24,7 +24,7 @@ describe what to monitor
 | Skill | `grafana-foundation-sdk` | Build dashboards as code in **TypeScript, Go, or Python**; scaffold + provision scripts. |
 | Skill | `panel-selection-advisor` | Map the metrics you want to track to the right visualization. |
 | Skill | `dashboard-preview` | Provision to Grafana and screenshot with Playwright MCP/CLI. |
-| Skill | `dashboard-quality-rubric` | Score a dashboard 0–100 across 8 weighted dimensions + give fixes. |
+| Skill | `dashboard-quality-rubric` | Yes/no rubric: renders with Playwright + checks code, returns PASS/FAIL + what to improve. |
 | Agent | `grafana-dashboard-architect` | End-to-end: design → build → preview → self-grade. |
 | Agent | `dashboard-taste-critic` | Independent, honest review against the rubric. |
 | Command | `/create-dashboard <what to monitor>` | Run the full build-and-verify loop. |

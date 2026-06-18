@@ -1,88 +1,59 @@
-# Grafana Dashboard Quality & Taste Rubric
+# Grafana Dashboard Quality & Taste Rubric (yes/no)
 
-Eight weighted dimensions, scored 0–5 each, totaling 100 points. Score against **evidence**
-(named panels, JSON fields, the rendered screenshot), not impressions. Use the 0/3/5 anchors to
-calibrate; 1, 2, 4 are intermediate.
+Every item below is answered **Yes** or **No** (or **N/A** if it genuinely can't be checked).
+There is no partial credit. Each item is tagged **[critical]** or **[normal]**.
 
----
+Answer each from **evidence**: a named panel, a JSON field, or what's visible in the Playwright
+screenshot. The visual items (marked 👁) must be judged from the screenshot, not the JSON.
 
-## 1. Data correctness — weight 20
+## Verdict rule
 
-Does every panel actually show the right data, loaded and correct?
-
-- **0** — Panels show "No data", datasource errors, or queries that don't answer the stated question.
-- **3** — All panels load data; a few queries are imprecise (wrong rate window, missing `by` grouping, double-counting).
-- **5** — Every panel loads, queries are correct and idiomatic (proper `rate()` windows, correct aggregation, no unit/label mistakes), and values match reality.
-
-> Any "No data" or datasource error caps the **overall** grade at "Needs work".
-
-## 2. Visualization choice — weight 15
-
-Is each metric on the right panel type? (See the `panel-selection-advisor` skill.)
-
-- **0** — Pervasive mismatches: gauges for unbounded metrics, pie charts of time series, tables where trends are needed.
-- **3** — Mostly sensible; 1–2 panels would read better as another type.
-- **5** — Every panel uses the viz that best answers its question; golden-signals/RED/USE patterns applied where relevant.
-
-## 3. Layout & structure — weight 15
-
-Grid, grouping, and reading order.
-
-- **0** — Overlapping/ragged panels, no rows, no order; the eye has nowhere to start.
-- **3** — Tidy grid and some grouping, but the most important signal isn't prioritized or rows are arbitrary.
-- **5** — Clean grid, logical rows with headers, most important signals top-left, consistent panel sizing, sensible density.
-
-## 4. Readability at a glance — weight 15
-
-Can the intended viewer understand it in ~5 seconds? **Judge from the screenshot.**
-
-- **0** — Cluttered; tiny text, 30+ unfiltered series, unclear what's healthy vs. broken.
-- **3** — Legible but requires study; some overcrowded panels or unclear good/bad direction.
-- **5** — Instantly scannable; clear titles, restrained series counts, color encodes health, key numbers pop.
-
-## 5. Units, thresholds, legends — weight 10
-
-The details that make numbers meaningful.
-
-- **0** — Raw unitless numbers (`1400000000`), no thresholds, cryptic or missing legends.
-- **3** — Most panels have units; thresholds/legends are inconsistent or partially missing.
-- **5** — Correct units everywhere, meaningful thresholds with sane colors, concise templated legends (`{{instance}}`).
-
-## 6. Consistency — weight 10
-
-Does it feel like one coherent dashboard?
-
-- **0** — Mixed color meanings, clashing time ranges, ad-hoc naming, hard-coded datasources.
-- **3** — Generally consistent with a few outliers.
-- **5** — Uniform naming, color semantics (red=bad), shared time range, template variables (`${datasource}`, `${job}`) instead of hard-coding.
-
-## 7. Performance & query hygiene — weight 5
-
-Will it stay fast and not melt the data source?
-
-- **0** — Unbounded high-cardinality queries, `[1s]` rate windows, huge time ranges by default, per-series fan-out.
-- **3** — Reasonable, with a couple of heavy or unbounded queries.
-- **5** — Bounded cardinality, appropriate rate windows, sensible default time range/refresh, top-N where needed.
-
-## 8. Visual taste & polish — weight 10
-
-The craft layer. **Judge from the screenshot.** Every deduction must name a concrete issue.
-
-- **0** — Noisy, inconsistent palette, decorative chartjunk, misleading axes (non-zero baselines on bar charts).
-- **3** — Clean and inoffensive but unremarkable; minor inconsistencies.
-- **5** — Deliberate and restrained: coherent palette, purposeful color, aligned whitespace, honest axes, nothing extraneous. Looks like someone cared.
+> **PASS** only if **every [critical] item is Yes** AND **at most 2 [normal] items are No**.
+> Otherwise **FAIL**. Any single critical "No" is an automatic FAIL.
 
 ---
 
-## Weighted total → grade bands
+## Correctness (data & queries)
 
-| Score | Band | Meaning |
-| --- | --- | --- |
-| 90–100 | **Excellent** | Ship it; exemplary. |
-| 80–89 | **Ship-ready** | Good; minor polish optional. |
-| 65–79 | **Needs work** | Usable but has clear gaps to fix before sharing. |
-| 40–64 | **Rough** | Significant issues across multiple dimensions. |
-| 0–39 | **Broken** | Wrong data or unusable; rebuild key parts. |
+1. **[critical]** 👁 Every panel loads data — no "No data", datasource, or query errors.
+2. **[critical]** Every panel has a datasource set and at least one target/query.
+3. **[critical]** Each query actually answers its panel's question (correct metric, labels, and aggregation — no double-counting).
+4. **[normal]** `rate()`/`increase()` use a sensible window (e.g. `[5m]`, not `[1s]`) for the scrape interval.
+5. **[normal]** A stable `uid` is set so re-provisioning updates the dashboard instead of duplicating it.
 
-Default acceptance bar: **≥ 80 (Ship-ready)**. Iterate build → preview → grade → fix until met,
-unless the user sets a different bar.
+## Visualization choice
+
+6. **[critical]** 👁 Each metric uses an appropriate panel type (no gauge for unbounded values, no pie chart of a time series, no table where a trend is needed).
+7. **[normal]** For a service, the golden signals (latency, traffic, errors, saturation) — or RED/USE — are represented where relevant.
+
+## Layout & readability
+
+8. **[critical]** 👁 The dashboard is readable at a glance — clear titles, no overlapping panels, the most important signal is prominent (top-left).
+9. **[normal]** 👁 Panels are grouped into logical rows with headers and sit on a tidy grid (consistent sizing).
+10. **[normal]** 👁 No panel is overcrowded (e.g. 30+ unfiltered series); series counts are restrained or filtered with a variable / top-N.
+
+## Units, thresholds, legends
+
+11. **[critical]** Every panel that shows a number has a unit set (no raw `1400000000`).
+12. **[normal]** Thresholds are set where they add meaning, with sane colors (red = bad).
+13. **[normal]** Legends are concise and templated (`{{instance}}`), not raw series dumps.
+
+## Consistency
+
+14. **[normal]** Datasources come from a `${datasource}` variable (or a single shared uid), not hard-coded per panel.
+15. **[normal]** Naming, color semantics, and time range are consistent across the dashboard.
+
+## Performance & hygiene
+
+16. **[normal]** No obviously expensive/high-cardinality unbounded queries; default time range and refresh are reasonable.
+
+## Visual taste & polish 👁
+
+17. **[critical]** 👁 No misleading visuals — honest axes (e.g. zero baselines on bar charts), no chartjunk, units not lying about scale.
+18. **[normal]** 👁 The dashboard looks deliberate and restrained — coherent palette, purposeful color, aligned whitespace, nothing extraneous.
+
+---
+
+When answering, every "No" must name the specific issue and panel so the "what to improve"
+summary can turn it directly into a fix. Every taste "No" (items 17–18) must name a concrete
+problem (clutter, inconsistent color, misleading axis) — never "feels off".

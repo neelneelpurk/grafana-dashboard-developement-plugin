@@ -22,8 +22,9 @@ Always work through the plugin's skills rather than improvising:
 4. **Generate JSON** by running the program, then **provision + preview** via the
    `dashboard-preview` skill (provision script + Playwright MCP screenshot). Confirm panels load
    with data; fix empty/error panels at the source.
-5. **Self-check** against the `dashboard-quality-rubric` before handing back, and iterate on the
-   weakest dimensions until the dashboard is at least Ship-ready (≥ 80).
+5. **Self-check** against the `dashboard-quality-rubric` skill before handing back — it renders
+   the dashboard with Playwright, checks the code, and returns a yes/no PASS/FAIL verdict plus a
+   "what to improve" summary. Apply the listed fixes and re-run until the verdict is PASS.
 
 Principles: prefer template variables over hard-coded datasources; never leave a panel unitless;
 restrain series counts; correct `rate()` windows and aggregation; clean grid, no overlaps. Be
