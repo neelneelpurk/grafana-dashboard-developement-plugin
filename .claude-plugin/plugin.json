@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "grafana-dashboard-builder",
+  "displayName": "Grafana Dashboard Builder",
+  "version": "0.1.0",
+  "description": "Design, generate, preview, and quality-grade Grafana dashboards as code with the Grafana Foundation SDK and Playwright. Includes a rubric-based quality and taste critic.",
+  "author": {
+    "name": "neelneelpurk"
+  },
+  "homepage": "https://github.com/neelneelpurk/grafana-dashboard-developement-plugin",
+  "repository": "https://github.com/neelneelpurk/grafana-dashboard-developement-plugin",
+  "license": "MIT",
+  "keywords": [
+    "grafana",
+    "dashboard",
+    "observability",
+    "foundation-sdk",
+    "playwright",
+    "as-code",
+    "rubric",
+    "quality"
+  ],
+  "userConfig": {
+    "grafana_url": {
+      "type": "string",
+      "title": "Grafana base URL",
+      "description": "Base URL of the Grafana instance used to provision and preview dashboards, e.g. http://localhost:3000",
+      "default": "http://localhost:3000"
+    },
+    "grafana_token": {
+      "type": "string",
+      "title": "Grafana API token / service-account token",
+      "description": "Token with dashboard write access. Used to push generated dashboards via the Grafana HTTP API.",
+      "sensitive": true
+    },
+    "sdk_language": {
+      "type": "string",
+      "title": "Foundation SDK language",
+      "description": "Preferred Grafana Foundation SDK language for generated projects: typescript, go, or python.",
+      "default": "typescript"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "grafana-dashboard-marketplace",
+  "description": "Marketplace hosting the Grafana Dashboard Builder plugin: build Grafana dashboards as code with the Foundation SDK, preview them with Playwright, and grade them against a quality rubric.",
+  "owner": {
+    "name": "neelneelpurk"
+  },
+  "plugins": [
+    {
+      "name": "grafana-dashboard-builder",
+      "displayName": "Grafana Dashboard Builder",
+      "description": "Design, generate, preview, and quality-grade Grafana dashboards as code with the Grafana Foundation SDK and Playwright MCP/CLI.",
+      "category": "development",
+      "source": "./",
+      "homepage": "https://github.com/neelneelpurk/grafana-dashboard-developement-plugin",
+      "keywords": ["grafana", "dashboard", "observability", "foundation-sdk", "playwright"]
+    }
+  ]
+}

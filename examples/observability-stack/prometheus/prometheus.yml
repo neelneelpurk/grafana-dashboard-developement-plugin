@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Synthetic golden-signal metrics for a fake "checkout" service.
+  - job_name: checkout
+    static_configs:
+      - targets: ["sample-app:8000"]
+        labels:
+          service: checkout
+
+  # Real host metrics for USE-style panels (CPU, memory, disk, network).
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
