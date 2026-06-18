@@ -50,6 +50,11 @@ Or load it directly for a session: `claude --plugin-dir /path/to/this/repo`.
 
 On enable you'll be prompted for `grafana_url`, `grafana_token`, and your preferred
 `sdk_language` (typescript / go / python). These feed the provision script and code generation.
+Two optional options let the Playwright browser reuse an existing Grafana login instead of
+prompting each time: `grafana_storage_state` (a saved session file — capture it with
+`skills/dashboard-preview/scripts/capture-session.sh`) and `grafana_cdp_endpoint` (connect to a
+running Chrome started with `--remote-debugging-port`). See the `dashboard-preview` skill's
+"Reusing a Chrome login" section.
 
 ## Quick start
 

@@ -43,7 +43,8 @@ actually see. Do not infer the look from JSON or skip the browser.
      example stack's `admin` / `admin`); otherwise **ask the user for the username and password**
      before proceeding. Fill them (`browser_type` / `browser_fill_form`) and submit, then navigate
      again. The browser runs isolated, so the session cookie lasts only for this review — that's
-     fine; just log in again next time rather than persisting credentials.
+     fine; just log in again next time rather than persisting credentials. To skip this prompt,
+     reuse an existing login — see "Reusing a Chrome login" below.
    - Let panels finish querying — `browser_wait_for` a few seconds, then `browser_snapshot` and
      confirm panel titles appear with no "No data" / "Datasource error" / "Query error" strings.
 
@@ -75,6 +76,39 @@ Only as a last resort, if no browser can run at all, Grafana can render server-s
 image-renderer plugin is installed**: `GET /render/d/<uid>/<slug>?width=1600&height=900&from=now-6h&to=now`.
 This is a fallback, not the normal path — the browser session above is preferred for fidelity and
 interaction (variable selection, time-range changes).
+
+## Reusing a Chrome login (skip the password prompt)
+
+By default the browser is isolated and you log in each session. To reuse an existing Grafana
+login instead, pick one of these — the bundled Playwright MCP and `screenshot.mjs` both honor
+them:
+
+1. **Saved session file (recommended, portable).** Log in once and save the session:
+   ```bash
+   skills/dashboard-preview/scripts/capture-session.sh http://localhost:3000 grafana-auth.json
+   ```
+   This opens a browser; log into Grafana, then close the window to write `grafana-auth.json`.
+   Reuse it by setting the `grafana_storage_state` plugin option (or `GRAFANA_STORAGE_STATE`) to
+   its absolute path — the Playwright MCP then starts already authenticated. For the CLI:
+   `node screenshot.mjs <url> out.png --storage-state grafana-auth.json`.
+
+2. **Your live Chrome over CDP.** Start Chrome with a debug port and a dedicated profile, log in,
+   then point Playwright at it:
+   ```bash
+   google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.chrome-grafana"
+   ```
+   Set the `grafana_cdp_endpoint` plugin option (or `GRAFANA_CDP_ENDPOINT`) to
+   `http://localhost:9222`. The MCP connects to that running browser and reuses its session.
+   CLI: `node screenshot.mjs <url> out.png --cdp http://localhost:9222`. (A normal Chrome must be
+   relaunched with the debug port; use a separate `--user-data-dir` since Chrome locks the default
+   profile.)
+
+3. **Share just the session cookie.** Copy `grafana_session` from Chrome DevTools → Application →
+   Cookies (it's httpOnly, so DevTools is the only place to read it):
+   `node screenshot.mjs <url> out.png --cookie grafana_session=<value>`. Quickest but the value
+   expires soonest.
+
+Precedence when several are set: CDP endpoint → storage-state file → cookie → interactive login.
 
 ## Notes
 

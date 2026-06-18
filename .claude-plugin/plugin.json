@@ -38,6 +38,18 @@
       "title": "Foundation SDK language",
       "description": "Preferred Grafana Foundation SDK language for generated projects: typescript, go, or python.",
       "default": "typescript"
+    },
+    "grafana_storage_state": {
+      "type": "file",
+      "title": "Playwright storage-state file (reuse a Chrome login)",
+      "description": "Absolute path to a Playwright storageState JSON captured after logging into Grafana (e.g. via scripts/capture-session.sh). When set, the Playwright browser reuses that logged-in session so you don't re-enter credentials.",
+      "required": false
+    },
+    "grafana_cdp_endpoint": {
+      "type": "string",
+      "title": "Chrome CDP endpoint (use a live Chrome session)",
+      "description": "Connect Playwright to an already-running Chrome instead of launching its own, e.g. http://localhost:9222. Start Chrome with --remote-debugging-port=9222 and a dedicated --user-data-dir, log into Grafana there, then set this. Takes precedence over the storage-state file.",
+      "required": false
     }
   }
 }
