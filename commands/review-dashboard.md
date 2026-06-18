@@ -12,8 +12,10 @@ Run the `dashboard-quality-rubric` skill end to end — it does the whole thing 
      use the `dashboard-sync` skill to open it with Playwright and fetch the current JSON model
      through the browser session — no token needed. (This URL also serves as the render target.)
    - A **local JSON file** or exported dashboard: use it directly and ensure it's provisioned.
-2. Render it with **Playwright MCP** and take a full-page screenshot — the visual rubric items
-   are judged from the render, not the JSON.
+2. **Take screenshots — always.** Render it with **Playwright MCP** and capture a full-page
+   screenshot to `./previews/`, plus per-panel/row screenshots for anything you flag. The visual
+   rubric items are judged from the rendered images, not the JSON. List every saved image in the
+   report and surface the key ones to the user. Never skip this step.
 3. Check the code/JSON for the correctness items.
 4. Answer every yes/no rubric item with cited evidence, apply the verdict rule (PASS only if all
    critical items are Yes and ≤ 2 normal items are No), and produce the **PASS/FAIL** verdict

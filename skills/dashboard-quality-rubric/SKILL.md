@@ -23,7 +23,10 @@ from the rendered result, and correctness from the source.
 
 ## Run the check (do all of this)
 
-### 1. Render and screenshot with Playwright MCP
+### 1. Render and screenshot with Playwright MCP (required — never skip)
+
+**Every review takes screenshots.** A review without a screenshot is incomplete — do not grade
+the visual items from JSON. Taking the screenshots is the first thing you do.
 
 - Make sure the dashboard is provisioned into Grafana. If it isn't, provision it first with
   `skills/grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json` (uses the
@@ -32,11 +35,21 @@ from the rendered result, and correctness from the source.
 - Use **Playwright MCP** (bundled in this plugin's `.mcp.json`) — refer to it as "Playwright MCP"
   so the browser tools are used, not shell Playwright:
   - `browser_navigate` to `<dashboard-url>?from=now-6h&to=now&refresh=&kiosk`. If a login page
-    appears, `browser_type` the credentials and submit, then navigate again.
+    appears, `browser_type` the credentials and submit, then navigate again. Give panels a few
+    seconds to run their queries (`browser_wait_for`) before capturing.
   - `browser_snapshot` to read the accessibility tree; confirm panel titles are present and scan
     for "No data" / "Datasource error" / "Query error".
-  - `browser_take_screenshot` (full page) → save to `./previews/<uid>.png`. This screenshot is
-    the evidence for the visual rubric items.
+  - **Full-page screenshot** → `browser_take_screenshot` saved to `./previews/<uid>.png`. This is
+    the primary evidence for the visual rubric items.
+  - **Per-panel / per-row screenshots** where it helps the verdict — capture any panel you flag
+    (e.g. a cluttered chart, a wrong viz, a misleading axis) as `./previews/<uid>-<panel>.png` so
+    each visual "No" is backed by a specific image. At minimum, additionally screenshot each row
+    on a large dashboard so nothing is judged unseen.
+  - List **every** saved screenshot path in the report, and surface the key images to the user
+    (e.g. with SendUserFile) so the evidence is visible, not just referenced.
+- If — and only if — rendering is genuinely impossible (no reachable Grafana at all), say so
+  explicitly at the top of the report and mark the visual items N/A. This is a degraded review,
+  not a normal one; never silently skip the screenshot.
 
 ### 2. Check the code and JSON
 
@@ -73,7 +86,12 @@ optional polish. End with a one-sentence overall takeaway.
 ```
 # Dashboard Quality Check — <title>
 Verdict: PASS ✅  |  FAIL ❌
-Screenshot: ./previews/<uid>.png   ·   Critical: <x>/<n> Yes   ·   Normal: <x>/<m> Yes
+Critical: <x>/<n> Yes   ·   Normal: <x>/<m> Yes
+
+## Screenshots
+- Full page: ./previews/<uid>.png
+- <panel/row>: ./previews/<uid>-<panel>.png
+- ... (every image captured) ...
 
 ## Rubric
 [critical] Data loads in every panel (no "No data"/errors) ........... Yes — all 8 panels populated
