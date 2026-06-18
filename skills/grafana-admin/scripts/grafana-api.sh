@@ -13,15 +13,31 @@
 #
 # Connection: GRAFANA_URL / CLAUDE_PLUGIN_OPTION_GRAFANA_URL (default http://localhost:3000)
 # Auth:       GRAFANA_TOKEN / CLAUDE_PLUGIN_OPTION_GRAFANA_TOKEN  (Bearer), else
-#             GRAFANA_USER + GRAFANA_PASSWORD                      (basic, default admin/admin)
+#             GRAFANA_USER + GRAFANA_PASSWORD                      (basic), else
+#             admin/admin — for a LOCALHOST url only (the bundled stack); never sent to a
+#             remote Grafana.
+# Note: uses `curl --fail-with-body`; curl 7.76+ (2021) required.
 set -euo pipefail
 
 URL="${GRAFANA_URL:-${CLAUDE_PLUGIN_OPTION_GRAFANA_URL:-http://localhost:3000}}"
 TOKEN="${GRAFANA_TOKEN:-${CLAUDE_PLUGIN_OPTION_GRAFANA_TOKEN:-}}"
-G_USER="${GRAFANA_USER:-admin}"
-G_PASS="${GRAFANA_PASSWORD:-admin}"
+G_USER="${GRAFANA_USER:-}"
+G_PASS="${GRAFANA_PASSWORD:-}"
 
-if [[ -n "$TOKEN" ]]; then AUTH=(-H "Authorization: Bearer $TOKEN"); else AUTH=(-u "${G_USER}:${G_PASS}"); fi
+# Decide auth: token > explicit basic-auth > admin:admin (localhost only) > error.
+is_localhost_url() { [[ "$1" =~ ^https?://(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?(/|$) ]]; }
+if [[ -n "$TOKEN" ]]; then
+  AUTH=(-H "Authorization: Bearer $TOKEN")
+elif [[ -n "$G_USER" || -n "$G_PASS" ]]; then
+  AUTH=(-u "${G_USER:-admin}:${G_PASS:-admin}")
+elif is_localhost_url "$URL"; then
+  AUTH=(-u "admin:admin")          # bundled local example stack only
+else
+  echo "No Grafana auth configured for $URL." >&2
+  echo "Set GRAFANA_TOKEN (or the grafana_token option), or GRAFANA_USER + GRAFANA_PASSWORD." >&2
+  echo "admin:admin is only assumed for a localhost Grafana." >&2
+  exit 1
+fi
 
 json_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 

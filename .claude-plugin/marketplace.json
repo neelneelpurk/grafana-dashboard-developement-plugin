@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
   "name": "grafana-dashboard-marketplace",
   "description": "Marketplace hosting the Grafana Dashboard Builder plugin: build Grafana dashboards as code with the Foundation SDK, preview them with Playwright, and grade them against a quality rubric.",
   "owner": {

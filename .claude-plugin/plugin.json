@@ -37,10 +37,11 @@
       "type": "string",
       "title": "Foundation SDK language",
       "description": "Preferred Grafana Foundation SDK language for generated projects: typescript, go, or python.",
+      "enum": ["typescript", "go", "python"],
       "default": "typescript"
     },
     "grafana_storage_state": {
-      "type": "file",
+      "type": "string",
       "title": "Playwright storage-state file (reuse a Chrome/SSO login)",
       "description": "Absolute path to a Playwright storageState JSON captured after logging into Grafana (capture-session.sh). Works with OIDC/SSO/SAML: you complete the SSO flow once in a real browser and Playwright reuses that session, so it never has to drive the identity provider.",
       "required": false

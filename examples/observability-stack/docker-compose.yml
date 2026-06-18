@@ -20,9 +20,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Anonymous viewing lets Playwright/server-side rendering open dashboards without a login.
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-      # Allow Playwright/server-side rendering without auth friction.
       - GF_USERS_DEFAULT_THEME=dark
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
