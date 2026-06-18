@@ -1,0 +1,59 @@
+# Local observability stack for developing and previewing dashboards.
+#   docker compose up -d
+# Grafana:    http://localhost:3000  (admin / admin, anonymous viewing enabled)
+# Prometheus: http://localhost:9090
+# Sample app: http://localhost:8000/metrics  (synthetic golden-signal metrics)
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: gdb-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: gdb-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      # Allow Playwright/server-side rendering without auth friction.
+      - GF_USERS_DEFAULT_THEME=dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  sample-app:
+    image: python:3.12-slim
+    container_name: gdb-sample-app
+    working_dir: /app
+    volumes:
+      - ./sample-app:/app:ro
+    command: sh -c "pip install --no-cache-dir prometheus_client==0.21.0 && python app.py"
+    ports:
+      - "8000:8000"
+
+  # Host metrics for USE-style panels. The host mounts + --path.rootfs make the
+  # collectors report the host (or Docker VM), not the container namespace.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: gdb-node-exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
