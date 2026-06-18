@@ -17,7 +17,8 @@ from the rendered result, and correctness from the source.
 ## Inputs
 
 - The dashboard JSON (Foundation SDK output or exported from Grafana), and/or the dashboard
-  `uid`/URL on a running Grafana.
+  `uid`/URL on a running Grafana. If given only a **Grafana URL**, use the `dashboard-sync` skill
+  to fetch the current JSON model through Playwright first.
 - The Foundation SDK source that produced it (for the code check), when available.
 
 ## Run the check (do all of this)

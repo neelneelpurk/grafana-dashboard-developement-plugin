@@ -24,12 +24,15 @@ describe what to monitor
 | Skill | `grafana-foundation-sdk` | Build dashboards as code in **TypeScript, Go, or Python**; scaffold + provision scripts. |
 | Skill | `panel-selection-advisor` | Map the metrics you want to track to the right visualization. |
 | Skill | `dashboard-preview` | Provision to Grafana and screenshot with Playwright MCP/CLI. |
+| Skill | `dashboard-sync` | Fetch an existing dashboard from a Grafana URL and push one back — via Playwright. |
 | Skill | `dashboard-quality-rubric` | Yes/no rubric: renders with Playwright + checks code, returns PASS/FAIL + what to improve. |
 | Agent | `grafana-dashboard-architect` | End-to-end: design → build → preview → self-grade. |
 | Agent | `dashboard-taste-critic` | Independent, honest review against the rubric. |
 | Command | `/create-dashboard <what to monitor>` | Run the full build-and-verify loop. |
-| Command | `/review-dashboard <json / uid / "current">` | Grade an existing dashboard. |
-| MCP | `playwright` | Browser automation for rendering and screenshots. |
+| Command | `/update-dashboard <url or file> — <change>` | Fetch (Playwright), edit, push back, re-check. |
+| Command | `/review-dashboard <url / json / uid>` | Grade an existing dashboard (fetches from a URL via Playwright). |
+| Command | `/provision-dashboard <json> [url] [api\|playwright]` | Push a dashboard to Grafana via Playwright or the API. |
+| MCP | `playwright` | Browser automation for rendering, fetching, pushing, and screenshots. |
 | Example | `examples/observability-stack` | Grafana + Prometheus + synthetic metrics to test against. |
 | Example | `examples/checkout-dashboard` | A complete golden-signals dashboard built for that stack. |
 
