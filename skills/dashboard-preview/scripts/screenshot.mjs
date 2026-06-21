@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Playwright CLI: open a Grafana dashboard in a browser session and screenshot it.
 // Requires: npm i -D playwright  (and `npx playwright install chromium`)
+// Built to run cleanly: launches with --no-sandbox (root/containers), navigates on
+// domcontentloaded with bounded waits (no hanging on live dashboards), and times out fast.
 //
 // Usage:
 //   node screenshot.mjs <dashboard-url> [output.png] [options]
@@ -13,7 +15,15 @@
 //   --user <u>  --pass <p>   defaults: admin / admin
 //
 // Env equivalents: GRAFANA_STORAGE_STATE, GRAFANA_CDP_ENDPOINT, GRAFANA_USER, GRAFANA_PASSWORD.
-import { chromium } from 'playwright';
+let chromium;
+try {
+  ({ chromium } = await import('playwright'));
+} catch {
+  console.error('Playwright is not installed. Install it first:');
+  console.error('  npm i -D playwright && npx playwright install chromium');
+  console.error('(Or just use Playwright MCP, which is bundled with this plugin.)');
+  process.exit(1);
+}
 
 // --- tiny arg parser: positionals + --flag value -----------------------------
 const argv = process.argv.slice(2);
@@ -55,12 +65,18 @@ if (cdp) {
   ctx = browser.contexts()[0] || (await browser.newContext());
   connectedOverCdp = true;
 } else {
-  browser = await chromium.launch();
+  // --no-sandbox is required to launch Chromium as root (containers/CI); --disable-dev-shm-usage
+  // avoids crashes on small /dev/shm.
+  browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   ctx = await browser.newContext({
     viewport: { width: 1600, height: 900 },
     ...(storageState ? { storageState } : {}),
   });
 }
+
+// Fail fast instead of hanging if Grafana is slow/unreachable.
+ctx.setDefaultNavigationTimeout(20000);
+ctx.setDefaultTimeout(20000);
 
 // Optional manual cookie injection (e.g. a grafana_session value copied from DevTools).
 if (opts.cookie?.length) {
@@ -81,7 +97,20 @@ if (opts.cookie?.length) {
 }
 
 const page = await ctx.newPage();
-await page.goto(renderUrl, { waitUntil: 'networkidle' });
+
+// Live Grafana dashboards keep network activity open (Grafana Live, streaming queries), so
+// 'networkidle' often never settles and would hang until timeout. Navigate on 'domcontentloaded'
+// (fast) and wait for panels to actually render below.
+async function settle() {
+  // Wait for at least one panel to mount, then a brief networkidle window — both bounded, so a
+  // busy or empty dashboard never blocks the screenshot.
+  await page
+    .waitForSelector('[data-panelid], [data-viz-panel-key], .panel-container, section[data-testid^="data-testid Panel"]', { timeout: 12000 })
+    .catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
+}
+
+await page.goto(renderUrl, { waitUntil: 'domcontentloaded' });
 
 const reusedSession = Boolean(storageState || cdp || opts.cookie?.length);
 
@@ -98,12 +127,12 @@ if (!reusedSession && (await userField.count()) && (await passField.count())) {
   await userField.fill(user);
   await passField.fill(pass);
   await page.locator('button[type="submit"], button[data-testid="data-testid Login button"]').first().click();
-  await page.waitForLoadState('networkidle');
-  await page.goto(renderUrl, { waitUntil: 'networkidle' });
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
+  await page.goto(renderUrl, { waitUntil: 'domcontentloaded' });
 }
 
-// Give panels time to run queries and render.
-await page.waitForTimeout(4000);
+// Let panels finish querying and rendering (bounded — see settle()).
+await settle();
 
 // If we're still on a login/SSO page, a screenshot would just capture the login screen. Stop and
 // tell the user how to reuse a logged-in session — the only viable path for OIDC/SSO.

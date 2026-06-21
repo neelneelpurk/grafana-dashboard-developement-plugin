@@ -79,11 +79,43 @@ The Foundation SDK builder API for all three languages, a panel/query/variable/t
 sheet, and common gotchas are in `skills/grafana-foundation-sdk/reference.md`. The grading
 rubric is in `skills/dashboard-quality-rubric/rubric.md`.
 
+## Choosing how to talk to Grafana
+
+The plugin reaches Grafana two ways and picks based on **how you authenticate**:
+
+| You have… | It uses | For |
+| --- | --- | --- |
+| An API/service-account token (or basic-auth user+pass) | **Grafana CLI** (`grafana-api.sh`) / **Grafana MCP** / the provision script | provisioning, folder & dashboard admin — fast, no browser |
+| Only an **OIDC/SSO** login (or a browser session) | **Playwright** (browser session against the same-origin API) | fetch/push/admin without a token, plus all screenshots |
+
+Both are built to run cleanly: the CLI uses bounded curl timeouts (fails fast on an unreachable
+Grafana, no hangs) and portable flags; the Playwright scripts launch with `--no-sandbox` (works
+as root / in containers), navigate on `domcontentloaded` with bounded waits (no hanging on live
+dashboards), and the MCP version is pinned for quick, offline-resilient startup.
+
 ## Requirements
 
-- Claude Code with plugin support.
-- Node.js 18+ (TypeScript / Playwright), Go 1.21+ or Python 3.9+ depending on chosen SDK language.
-- Docker (for the bundled example stack) or your own Grafana + data source.
+- Claude Code with plugin support; **bash** (the MCP launchers and helper scripts are bash —
+  on Windows use WSL/Git Bash).
+- **Node.js 18+** — for Playwright MCP and the Foundation SDK (TypeScript).
+- **curl + python3** — used by the Grafana CLI (`grafana-api.sh`) and the provision script.
+- Go 1.21+ or Python 3.9+ if you generate dashboards in those languages.
+- For the bundled example stack: **Docker**. Otherwise your own Grafana + data source.
+- Optional: an API token (`grafana_token`) to enable the Grafana MCP and token-auth CLI; the
+  Grafana MCP additionally needs the `mcp-grafana` binary or Docker.
+
+## Troubleshooting
+
+- **CLI screenshot fallback** (`screenshot.mjs`) needs Playwright installed:
+  `npm i -D playwright && npx playwright install chromium`. Prefer Playwright MCP, which is bundled.
+- **Pin/upgrade Playwright MCP**: it defaults to a known-good version; set
+  `PLAYWRIGHT_MCP_VERSION=latest` (or a specific version) to change it.
+- **SSO logins**: capture a session once with
+  `skills/dashboard-preview/scripts/capture-session.sh` and set `grafana_storage_state`, or use a
+  live Chrome via `grafana_cdp_endpoint`. See the `dashboard-preview` skill.
+- **Grafana MCP shows disconnected**: it only runs when `grafana_token` is set and the
+  `mcp-grafana` binary or Docker is available — otherwise use the `grafana-api.sh` CLI or
+  Playwright, which cover the same operations.
 
 ## License
 

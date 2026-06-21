@@ -16,6 +16,10 @@
 #             GRAFANA_USER + GRAFANA_PASSWORD                      (basic, default admin/admin)
 set -euo pipefail
 
+for dep in curl python3; do
+  command -v "$dep" >/dev/null 2>&1 || { echo "ERROR: '$dep' is required but not installed." >&2; exit 1; }
+done
+
 URL="${GRAFANA_URL:-${CLAUDE_PLUGIN_OPTION_GRAFANA_URL:-http://localhost:3000}}"
 TOKEN="${GRAFANA_TOKEN:-${CLAUDE_PLUGIN_OPTION_GRAFANA_TOKEN:-}}"
 G_USER="${GRAFANA_USER:-admin}"
@@ -25,11 +29,23 @@ if [[ -n "$TOKEN" ]]; then AUTH=(-H "Authorization: Bearer $TOKEN"); else AUTH=(
 
 json_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 
-req() { # method path [data]
+req() { # method path [data]  — prints the response body; returns non-zero on HTTP >= 400
   local method="$1" path="$2" data="${3:-}"
-  local args=(-sS --fail-with-body -X "$method" "${AUTH[@]}" -H 'Content-Type: application/json' "$URL$path")
+  local args=(-sS --connect-timeout 5 --max-time 30 -X "$method" "${AUTH[@]}"
+              -H 'Content-Type: application/json' -w '\n%{http_code}' "$URL$path")
   [[ -n "$data" ]] && args+=(--data-binary "$data")
-  curl "${args[@]}"
+  local resp code body
+  if ! resp="$(curl "${args[@]}")"; then
+    echo "ERROR: could not reach Grafana at $URL (timeout or connection refused)." >&2
+    return 1
+  fi
+  code="${resp##*$'\n'}"          # last line is the HTTP status from -w
+  body="${resp%$'\n'*}"           # everything before it is the response body
+  [[ -n "$body" ]] && printf '%s\n' "$body"
+  if (( code < 200 || code >= 300 )); then
+    echo "ERROR: HTTP $code from $method $path" >&2
+    return 1
+  fi
 }
 
 action="${1:-}"

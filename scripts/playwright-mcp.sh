@@ -12,11 +12,14 @@ set -euo pipefail
 CDP="${GRAFANA_CDP_ENDPOINT:-${CLAUDE_PLUGIN_OPTION_GRAFANA_CDP_ENDPOINT:-}}"
 STATE="${GRAFANA_STORAGE_STATE:-${CLAUDE_PLUGIN_OPTION_GRAFANA_STORAGE_STATE:-}}"
 
+# Pin for fast, offline-resilient startup; override with PLAYWRIGHT_MCP_VERSION=latest to upgrade.
+PKG="@playwright/mcp@${PLAYWRIGHT_MCP_VERSION:-0.0.76}"
+
 if [[ -n "$CDP" ]]; then
   # Reuse the live browser; isolated/storage-state do not apply when connecting over CDP.
-  exec npx @playwright/mcp@latest --cdp-endpoint "$CDP"
+  exec npx "$PKG" --cdp-endpoint "$CDP"
 elif [[ -n "$STATE" ]]; then
-  exec npx @playwright/mcp@latest --isolated --storage-state "$STATE"
+  exec npx "$PKG" --isolated --storage-state "$STATE"
 else
-  exec npx @playwright/mcp@latest --isolated
+  exec npx "$PKG" --isolated
 fi

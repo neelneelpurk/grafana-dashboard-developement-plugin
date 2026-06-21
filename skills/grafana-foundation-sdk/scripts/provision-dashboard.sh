@@ -28,7 +28,8 @@ fi
 #   exist on the target Grafana would be rejected).
 # Prefer python3 for robust JSON handling; fall back to a shell heuristic if it is absent.
 PAYLOAD_FILE="$(mktemp)"
-trap 'rm -f "$PAYLOAD_FILE"' EXIT
+RESP_FILE="$(mktemp)"
+trap 'rm -f "$PAYLOAD_FILE" "$RESP_FILE"' EXIT
 
 if command -v python3 >/dev/null 2>&1; then
   FOLDER_UID="$FOLDER_UID" python3 - "$FILE" > "$PAYLOAD_FILE" <<'PY'
@@ -64,9 +65,7 @@ else
 fi
 
 echo "Provisioning $FILE -> $URL"
-RESP_FILE="$(mktemp)"
-trap 'rm -f "$PAYLOAD_FILE" "$RESP_FILE"' EXIT
-HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w '%{http_code}' \
+HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 60 -o "$RESP_FILE" -w '%{http_code}' \
   -X POST "$URL/api/dashboards/db" \
   -H 'Content-Type: application/json' \
   "${AUTH[@]}" \

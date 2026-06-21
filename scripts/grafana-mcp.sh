@@ -28,6 +28,8 @@ elif command -v docker >/dev/null 2>&1; then
     --add-host host.docker.internal:host-gateway \
     mcp/grafana -t stdio
 else
-  echo "grafana MCP needs the 'mcp-grafana' binary or Docker. Skipping." >&2
-  exit 0
+  # A token is configured but there's no way to run the server — surface it as a real error
+  # (the grafana-api.sh CLI and Playwright paths still work without this MCP).
+  echo "ERROR: grafana MCP needs the 'mcp-grafana' binary or Docker, neither found." >&2
+  exit 1
 fi
