@@ -18,6 +18,15 @@ describe what to monitor
    → apply the "what to improve" fixes and repeat until the verdict is PASS
 ```
 
+Already have a dashboard? Bring it into the as-code workflow:
+
+```
+existing dashboard JSON / URL
+   → reverse it into SDK code    (dashboard-to-code skill — TS / Go / Python)
+   → verify the round-trip       (regenerate JSON, diff against the original)
+   → edit, preview, and grade    (from here it's the same loop as above)
+```
+
 ## Components
 
 | Type | Name | Purpose |
