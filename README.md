@@ -2,9 +2,10 @@
 
 A Claude Code plugin to **design, generate, preview, and quality-grade Grafana dashboards as
 code** using the [Grafana Foundation SDK](https://github.com/grafana/grafana-foundation-sdk)
-(TypeScript, Go, or Python) and [Playwright MCP](https://github.com/microsoft/playwright-mcp).
-It includes a rubric-based quality-and-taste critic so dashboards are judged consistently, not
-by vibes.
+(TypeScript, Go, or Python) and [Playwright](https://github.com/microsoft/playwright-mcp) for
+rendering — **both the Playwright MCP and the Playwright CLI are supported**: the bundled MCP is
+preferred, and the plugin falls back to the CLI scripts when MCP isn't available. It includes a
+rubric-based quality-and-taste critic so dashboards are judged consistently, not by vibes.
 
 ## What it does
 
@@ -12,9 +13,18 @@ by vibes.
 describe what to monitor
    → pick the right panels       (panel-selection-advisor skill)
    → build it as code            (grafana-foundation-sdk skill — TS / Go / Python)
-   → provision + screenshot      (dashboard-preview skill — Playwright MCP)
+   → provision + screenshot      (dashboard-preview skill — Playwright MCP or CLI)
    → yes/no quality check        (dashboard-quality-rubric skill — renders + checks code)
    → apply the "what to improve" fixes and repeat until the verdict is PASS
+```
+
+Already have a dashboard? Bring it into the as-code workflow:
+
+```
+existing dashboard JSON / URL
+   → reverse it into SDK code    (dashboard-to-code skill — TS / Go / Python)
+   → verify the round-trip       (regenerate JSON, diff against the original)
+   → edit, preview, and grade    (from here it's the same loop as above)
 ```
 
 ## Components
@@ -22,6 +32,7 @@ describe what to monitor
 | Type | Name | Purpose |
 | --- | --- | --- |
 | Skill | `grafana-foundation-sdk` | Build dashboards as code in **TypeScript, Go, or Python**; scaffold + provision scripts. |
+| Skill | `dashboard-to-code` | Convert an existing dashboard **JSON → Foundation SDK code** (TS / Go / Python), with a round-trip check. |
 | Skill | `panel-selection-advisor` | Map the metrics you want to track to the right visualization. |
 | Skill | `dashboard-preview` | Provision to Grafana and screenshot with Playwright MCP/CLI. |
 | Skill | `dashboard-sync` | Fetch an existing dashboard from a Grafana URL and push one back — via Playwright. |
@@ -31,10 +42,11 @@ describe what to monitor
 | Agent | `dashboard-taste-critic` | Independent, honest review against the rubric. |
 | Command | `/create-dashboard <what to monitor>` | Run the full build-and-verify loop. |
 | Command | `/update-dashboard <url or file> — <change>` | Fetch (Playwright), edit, push back, re-check. |
+| Command | `/convert-dashboard <json / url / uid> [language]` | Reverse an existing dashboard JSON into Foundation SDK code, verified by round-trip. |
 | Command | `/review-dashboard <url / json / uid>` | Grade an existing dashboard (fetches from a URL via Playwright). |
 | Command | `/provision-dashboard <json> [url] [api\|playwright]` | Push a dashboard to Grafana via Playwright or the API. |
 | Command | `/grafana-admin <action> <args>` | Create/delete folders, move/delete dashboards. |
-| MCP | `playwright` | Browser automation for rendering, fetching, pushing, and screenshots. |
+| MCP | `playwright` | Browser automation for rendering, fetching, pushing, and screenshots. Bundled MCP is preferred; the bundled Playwright CLI scripts (`scripts/`) are the fallback when MCP is unavailable. |
 | MCP | `grafana` | Official Grafana MCP for token-auth management (starts only when `grafana_token` is set). |
 | Example | `examples/observability-stack` | Grafana + Prometheus + synthetic metrics to test against. |
 | Example | `examples/checkout-dashboard` | A complete golden-signals dashboard built for that stack. |
