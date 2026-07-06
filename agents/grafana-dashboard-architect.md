@@ -19,6 +19,9 @@ Always work through the plugin's skills rather than improvising:
    (`sdk_language` option; default TypeScript). Read its `reference.md` so method names and
    import paths are exact. Set a stable `uid`, units, thresholds, template variables
    (`${datasource}`, `${job}`), and group panels into logical rows with the key signal top-left.
+   **For Go, never duplicate a panel's builder chain** — factor repeated panel/row shapes into
+   parametrized functions in a `panels` package (titles/queries/units as arguments) and compose
+   the dashboard from calls into it; see reference.md's "Reusable Go panel builders".
 4. **Generate JSON** by running the program, then **provision + preview** via the
    `dashboard-preview` skill (provision script + Playwright MCP screenshot). Confirm panels load
    with data; fix empty/error panels at the source.

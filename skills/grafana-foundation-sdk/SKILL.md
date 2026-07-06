@@ -120,51 +120,102 @@ The Go SDK mirrors the TypeScript one. Each resource type is its own package und
 `github.com/grafana/grafana-foundation-sdk/go/...`. Builder methods are PascalCase; `Build()`
 returns `(model, error)`.
 
+**Write Go output as reusable, parametrized panel builders, not one long `main.go` of
+copy-pasted chains.** Put panel/row factory functions in their own package (`panels/`, as
+created by `scripts/scaffold.sh <dir> go`) — each function takes the bits that vary (title,
+PromQL expression, legend, unit) and returns a configured builder. `main.go` then composes
+dashboards by calling those functions, so adding a panel or a whole service's row is one
+function call instead of a new 15-line chain:
+
 ```go
+// panels/panels.go
+package panels
+
+import (
+	"github.com/grafana/grafana-foundation-sdk/go/cog"
+	"github.com/grafana/grafana-foundation-sdk/go/common"
+	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
+	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
+	"github.com/grafana/grafana-foundation-sdk/go/stat"
+	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
+)
+
+func Ptr[T any](v T) *T { return &v }
+
+func Datasource(dsType string) dashboard.DataSourceRef {
+	return dashboard.DataSourceRef{Type: Ptr(dsType), Uid: Ptr("${datasource}")}
+}
+
+// TimeSeries is the shared shape for every "value over time" panel (latency,
+// traffic, error rate, ...). Call it once per metric instead of writing a new chain.
+func TimeSeries(title, expr, legend, unit string, ds dashboard.DataSourceRef) *timeseries.PanelBuilder {
+	return timeseries.NewPanelBuilder().
+		Title(title).Datasource(ds).Unit(unit).Min(0).
+		WithTarget(prometheus.NewDataqueryBuilder().Expr(expr).LegendFormat(legend))
+}
+
+func CurrentValue(title, expr, unit string, ds dashboard.DataSourceRef) *stat.PanelBuilder {
+	return stat.NewPanelBuilder().
+		Title(title).Datasource(ds).Unit(unit).
+		ReduceOptions(common.NewReduceDataOptionsBuilder().Calcs([]string{"lastNotNull"}).Fields("").Values(false)).
+		WithTarget(prometheus.NewDataqueryBuilder().Expr(expr))
+}
+
+// GoldenSignals returns latency/traffic/error panels for one service's job label.
+// Call it once per service; the panel definitions are never duplicated.
+func GoldenSignals(service, latencyUnit string, ds dashboard.DataSourceRef) []cog.Builder[dashboard.Panel] {
+	sel := `job="` + service + `"`
+	return []cog.Builder[dashboard.Panel]{
+		TimeSeries("Latency p95",
+			`histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{`+sel+`}[5m])) by (le))`,
+			"p95", latencyUnit, ds).Span(8).Height(8),
+		TimeSeries("Requests/sec",
+			`sum(rate(http_requests_total{`+sel+`}[5m]))`,
+			"rps", "reqps", ds).Span(8).Height(8),
+		TimeSeries("Error rate",
+			`sum(rate(http_requests_total{`+sel+`,status=~"5.."}[5m]))/sum(rate(http_requests_total{`+sel+`}[5m]))`,
+			"errors", "percentunit", ds).Span(8).Height(8),
+	}
+}
+
+// WithPanels splices a factory-built slice of panels into a dashboard in one call.
+func WithPanels(b *dashboard.DashboardBuilder, panels ...cog.Builder[dashboard.Panel]) *dashboard.DashboardBuilder {
+	for _, p := range panels {
+		b = b.WithPanel(p)
+	}
+	return b
+}
+```
+
+```go
+// main.go
 package main
 
 import (
 	"encoding/json"
 	"fmt"
 
+	"grafana-dashboards/panels"
+
 	"github.com/grafana/grafana-foundation-sdk/go/common"
 	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
-	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
-	"github.com/grafana/grafana-foundation-sdk/go/stat"
-	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
-	"github.com/grafana/grafana-foundation-sdk/go/units"
 )
 
 func main() {
-	ds := dashboard.DataSourceRef{Type: cogPtr("prometheus"), Uid: cogPtr("${datasource}")}
+	ds := panels.Datasource("prometheus")
 
 	builder := dashboard.NewDashboardBuilder("Service Overview").
 		Uid("service-overview").
 		Tags([]string{"generated", "service"}).
 		Refresh("30s").
 		Time("now-6h", "now").
-		Timezone(common.TimeZoneBrowser).
-		WithRow(dashboard.NewRowBuilder("Golden signals")).
-		WithPanel(
-			stat.NewPanelBuilder().
-				Title("Requests / sec").
-				Datasource(ds).
-				Unit(units.RequestsPerSecond).
-				WithTarget(prometheus.NewDataqueryBuilder().
-					Expr("sum(rate(http_requests_total[5m]))")).
-				Span(6).Height(8),
-		).
-		WithPanel(
-			timeseries.NewPanelBuilder().
-				Title("Latency p95").
-				Datasource(ds).
-				Unit(units.Seconds).
-				Min(0).
-				WithTarget(prometheus.NewDataqueryBuilder().
-					Expr("histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))").
-					LegendFormat("p95")).
-				Span(12).Height(8),
-		)
+		Timezone(common.TimeZoneBrowser)
+
+	// Adding another service is one more call, not another copy-pasted block.
+	for _, service := range []string{"checkout", "payments"} {
+		builder = builder.WithRow(dashboard.NewRowBuilder(service))
+		builder = panels.WithPanels(builder, panels.GoldenSignals(service, "s", ds)...)
+	}
 
 	dash, err := builder.Build()
 	if err != nil {
@@ -173,13 +224,14 @@ func main() {
 	out, _ := json.MarshalIndent(dash, "", "  ")
 	fmt.Println(string(out))
 }
-
-func cogPtr[T any](v T) *T { return &v }
 ```
 
-The same rules from the TypeScript section apply: stable `Uid`, a `Datasource` and at least one
-`WithTarget` per panel, template variables over hard-coded values, and never hand-wrap the
-output of `Build()`.
+Key rules: stable `Uid`, a `Datasource` and at least one `WithTarget` per panel, template
+variables over hard-coded values, never hand-wrap the output of `Build()`, and — for
+maintainability — **never write the same panel shape twice**: as soon as a second panel or row
+looks like an existing one with different strings, extract it into a function in `panels/` and
+call it with the varying arguments. See "Reusable Go panel builders" in `reference.md` for more
+patterns (grouping panels into reusable row functions, sharing thresholds/units).
 
 ## Python builder pattern
 

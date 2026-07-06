@@ -46,15 +46,25 @@ building it back to JSON should reproduce the original dashboard.
      (`QueryVariableBuilder`, `DatasourceVariableBuilder`, `CustomVariableBuilder`, …).
    - Layout: reproduce rows with `.withRow(...)` and panel sizes with `.span()` / `.height()`
      (derived from `gridPos.w` / `gridPos.h`).
-3. **Prefer variables over hard-coded values.** When the JSON hard-codes a datasource uid that a
+3. **Factor out repeated panel shapes instead of transcribing each panel literally.** If the
+   source JSON has the same panel shape multiple times with only titles/queries/units differing
+   (e.g. a latency/traffic/errors row repeated per service, or the same table with different
+   filters), don't emit one literal builder chain per occurrence — write one parametrized
+   function and call it per occurrence. **For Go specifically**, put these factory functions in
+   a `panels` package (see the `grafana-foundation-sdk` skill's `reference.md`, "Reusable Go
+   panel builders") and have `main.go` compose the dashboard from calls into it; for TypeScript/
+   Python, the equivalent is a small `panels.ts` / `panels.py` module of factory functions. This
+   is a structural improvement over the source JSON (which has no notion of reuse) — call it out
+   in the report alongside other tidy-ups.
+4. **Prefer variables over hard-coded values.** When the JSON hard-codes a datasource uid that a
    template variable already covers, reference `${datasource}` instead — but only when it doesn't
    change behavior. Faithful conversion comes first; tidy-ups second, and call them out.
-4. **Generate JSON and verify the round-trip.** Run the generated program to emit JSON
+5. **Generate JSON and verify the round-trip.** Run the generated program to emit JSON
    (`npx tsx src/index.ts` / `go run .` / `python dashboard.py`) and diff it against the original
    model. Account for benign differences (key ordering, SDK-populated defaults, a dropped
    top-level `id`); investigate anything semantic — a missing panel, a changed query, a lost
    threshold — and fix the code until the dashboard is equivalent.
-5. **Report what couldn't be mapped.** If a panel type, plugin, or option has no builder
+6. **Report what couldn't be mapped.** If a panel type, plugin, or option has no builder
    counterpart, keep the closest representation, leave a comment in the code, and tell the user.
    Don't silently drop configuration.
 
@@ -64,7 +74,7 @@ If there's no project to hold the generated code, scaffold one with the `grafana
 skill's helper, then write the converted dashboard into it:
 
 ```bash
-skills/grafana-foundation-sdk/scripts/scaffold.sh <dir> <language>
+../grafana-foundation-sdk/scripts/scaffold.sh <dir> <language>   # path relative to this skill's own directory
 ```
 
 ## Handing off

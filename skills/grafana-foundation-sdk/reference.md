@@ -162,6 +162,45 @@ each constant maps to. Don't leave a numeric panel unitless — use `short` when
 | Requests/sec | `RequestsPerSecond` | `"reqps"` |
 | Ops/sec | `OpsPerSecond` | `"ops"` |
 
+## Reusable Go panel builders
+
+Never repeat a panel's builder chain with only its strings changed — extract a function.
+Structure Go output as a `panels` package of small factory functions plus a thin `main.go` that
+composes them (`scripts/scaffold.sh <dir> go` creates this layout):
+
+- **One function per panel *shape*, not per panel instance.** `TimeSeries(title, expr, legend,
+  unit, ds)`, `CurrentValue(title, expr, unit, ds)`, `Table(title, expr, ds)` — parametrize
+  everything that varies between panels of the same shape (title, PromQL, legend, unit,
+  thresholds), and call the function once per real panel.
+- **One function per recurring row.** If every service dashboard needs the same
+  latency/traffic/errors/saturation layout, write `func GoldenSignals(service string, ds
+  dashboard.DataSourceRef) []cog.Builder[dashboard.Panel]` once and call it per service/job
+  label instead of duplicating four panels per service.
+- **Return the SDK's builder interface, not a built model**, so callers can keep chaining
+  (`.Span()`, `.Height()`, `.Thresholds()`) after the factory call:
+  `func TimeSeries(...) *timeseries.PanelBuilder { return timeseries.NewPanelBuilder()... }`.
+  For functions that return a *mix* of panel types (e.g. a row of a stat + two time series),
+  return `[]cog.Builder[dashboard.Panel]` — every panel builder implements that interface, so
+  they can live in one slice and be passed straight to `WithPanel`.
+- **Provide a `WithPanels(b *dashboard.DashboardBuilder, panels ...cog.Builder[dashboard.Panel])
+  *dashboard.DashboardBuilder` helper** that loops and calls `.WithPanel()`, so a factory-built
+  slice splices into a dashboard in one line instead of one `.WithPanel(...)` per element.
+- **Share the datasource and threshold builders too.** A `Datasource(dsType string)
+  dashboard.DataSourceRef` helper and a `StandardThresholds()
+  *dashboard.ThresholdsConfigBuilder` helper keep every panel consistent and mean a palette/scale
+  change happens in one place.
+- **Multiple dashboards in one project** (e.g. per-team or per-environment) should import the
+  same `panels` package rather than each having their own copy of the same builder logic —
+  treat `panels/` as the shared library and dashboard `main.go`/`cmd/*` files as thin composition
+  roots.
+- Keep factory functions small and honest: if a panel genuinely needs one-off configuration,
+  it's fine to build it inline in `main.go` — extract only what's actually reused, don't
+  pre-abstract for hypothetical future panels.
+
+This mirrors what `dashboard-to-code` should do when reversing an existing dashboard's JSON into
+Go: if the same panel shape repeats across rows or services in the source JSON, emit one factory
+function and call it per occurrence instead of one literal builder chain per panel.
+
 ## Gotchas
 
 - **Always set a `uid`.** Without it Grafana creates a new dashboard on every provision.

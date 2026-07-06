@@ -30,7 +30,8 @@ That is the point of this skill — open the dashboard in a browser and capture 
 actually see. Do not infer the look from JSON or skip the browser.
 
 1. **Provision** the dashboard JSON:
-   `skills/grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json`
+   `../grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json` (path relative to
+   this skill's own directory; the `grafana-foundation-sdk` skill sits alongside it).
    The script prints the dashboard URL on success. (If reviewing an existing dashboard from a
    Grafana URL, skip this — you already have the URL.)
 
@@ -74,7 +75,7 @@ Run the bundled headless browser-session script, which does the same thing (open
 logs in if needed, waits, screenshots):
 
 ```bash
-node skills/dashboard-preview/scripts/screenshot.mjs \
+node scripts/screenshot.mjs \
   "<dashboard-url>" ./previews/<uid>.png [user] [pass]
 ```
 
@@ -94,7 +95,7 @@ these:
 1. **Saved session file (recommended, portable; works with any SSO).** Log in once and save the
    session:
    ```bash
-   skills/dashboard-preview/scripts/capture-session.sh http://localhost:3000 grafana-auth.json
+   scripts/capture-session.sh http://localhost:3000 grafana-auth.json
    ```
    This opens a real browser; complete the **entire login — including the SSO/OIDC redirect and
    MFA** — then close the window to write `grafana-auth.json` (cookies + tokens for the session).
