@@ -27,6 +27,32 @@ existing dashboard JSON / URL
    → edit, preview, and grade    (from here it's the same loop as above)
 ```
 
+## Quick start
+
+Fastest path to a first dashboard, against the bundled example stack:
+
+```bash
+# 1. Install the plugin (see "Install" below for the npx-skills-only alternative)
+# In Claude Code:
+/plugin marketplace add neelneelpurk/grafana-dashboard-developement-plugin
+/plugin install grafana-dashboard-builder@grafana-dashboard-marketplace
+
+# 2. Bring up a local Grafana + Prometheus + sample metrics
+cd examples/observability-stack && docker compose up -d
+
+# 3. Build a dashboard
+/create-dashboard the checkout service in my local Prometheus
+
+# 4. Or grade one you already have
+/review-dashboard ./checkout.json
+```
+
+That's the full build → preview → grade loop from "What it does" above, running against a real
+Grafana. From here: **Install** below covers the `npx skills add` alternative (installing
+individual skills without the plugin), **Components** lists every piece and what it does, and
+`skills/grafana-foundation-sdk/reference.md` / `skills/dashboard-quality-rubric/rubric.md` are the
+builder API cheat sheet and grading rubric to read before writing non-trivial dashboards.
+
 ## Components
 
 | Type | Name | Purpose |
@@ -97,28 +123,15 @@ the window); `grafana_cdp_endpoint` connects to a running Chrome you started wit
 `--remote-debugging-port` and logged into. See the `dashboard-preview` skill's "Reusing a Chrome
 login" section.
 
-## Quick start
-
-```bash
-# 1. Bring up a local Grafana + Prometheus + sample metrics
-cd examples/observability-stack && docker compose up -d
-
-# 2. In Claude Code, build a dashboard
-/create-dashboard the checkout service in my local Prometheus
-
-# 3. Or grade one you already have
-/review-dashboard ./checkout.json
-```
-
-The Foundation SDK builder API for all three languages, a panel/query/variable/threshold cheat
-sheet, and common gotchas are in `skills/grafana-foundation-sdk/reference.md`. The grading
-rubric is in `skills/dashboard-quality-rubric/rubric.md`.
-
 ## Requirements
 
 - Claude Code with plugin support.
 - Node.js 18+ (TypeScript / Playwright), Go 1.21+ or Python 3.9+ depending on chosen SDK language.
 - Docker (for the bundled example stack) or your own Grafana + data source.
+
+## Release notes
+
+See [CHANGELOG.md](./CHANGELOG.md) for what changed in each version.
 
 ## License
 

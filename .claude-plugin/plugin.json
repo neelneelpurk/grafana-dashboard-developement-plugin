@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "grafana-dashboard-builder",
   "displayName": "Grafana Dashboard Builder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Design, generate, preview, and quality-grade Grafana dashboards as code with the Grafana Foundation SDK and Playwright. Includes a rubric-based quality and taste critic.",
   "author": {
     "name": "neelneelpurk"
