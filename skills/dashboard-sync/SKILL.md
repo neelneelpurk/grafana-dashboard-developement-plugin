@@ -90,7 +90,8 @@ Import), `browser_snapshot` to check panels load, and `browser_take_screenshot` 
 ## When to use the HTTP script instead
 
 If you have an API token or basic-auth credentials and don't need a browser, the
-`skills/grafana-foundation-sdk/scripts/provision-dashboard.sh` script pushes via the HTTP API and
+`../grafana-foundation-sdk/scripts/provision-dashboard.sh` script (relative to this skill's own
+directory) pushes via the HTTP API and
 is simpler for automation. Use Playwright (this skill) when you only have a browser session / URL,
 when the user explicitly wants the push done through Playwright, or when you also want a rendered
 screenshot in the same browser session.

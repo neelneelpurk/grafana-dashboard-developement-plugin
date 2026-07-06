@@ -46,14 +46,15 @@ screenshot. The visual items (marked 👁) must be judged from the screenshot, n
 ## Performance & hygiene
 
 16. **[normal]** No obviously expensive/high-cardinality unbounded queries; default time range and refresh are reasonable.
+17. **[normal]** When Foundation SDK source is available: repeated panel shapes (e.g. the same golden-signals row per service) are factored into reusable, parametrized functions rather than copy-pasted builder chains — N/A if there's no repetition to factor or no source was provided.
 
 ## Visual taste & polish 👁
 
-17. **[critical]** 👁 No misleading visuals — honest axes (e.g. zero baselines on bar charts), no chartjunk, units not lying about scale.
-18. **[normal]** 👁 The dashboard looks deliberate and restrained — coherent palette, purposeful color, aligned whitespace, nothing extraneous.
+18. **[critical]** 👁 No misleading visuals — honest axes (e.g. zero baselines on bar charts), no chartjunk, units not lying about scale.
+19. **[normal]** 👁 The dashboard looks deliberate and restrained — coherent palette, purposeful color, aligned whitespace, nothing extraneous.
 
 ---
 
 When answering, every "No" must name the specific issue and panel so the "what to improve"
-summary can turn it directly into a fix. Every taste "No" (items 17–18) must name a concrete
+summary can turn it directly into a fix. Every taste "No" (items 18–19) must name a concrete
 problem (clutter, inconsistent color, misleading axis) — never "feels off".

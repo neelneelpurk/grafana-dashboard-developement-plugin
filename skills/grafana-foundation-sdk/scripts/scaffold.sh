@@ -64,6 +64,63 @@ module grafana-dashboards
 
 go 1.21
 MOD
+    mkdir -p panels
+    cat > panels/panels.go <<'GO'
+// Package panels holds reusable, parametrized panel builders shared across
+// dashboards. Add a panel shape here once and call it with different
+// titles/queries/units instead of copy-pasting builder chains in main.go.
+package panels
+
+import (
+	"github.com/grafana/grafana-foundation-sdk/go/cog"
+	"github.com/grafana/grafana-foundation-sdk/go/common"
+	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
+	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
+	"github.com/grafana/grafana-foundation-sdk/go/stat"
+	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
+)
+
+// Ptr is the generic helper the SDK needs for optional pointer fields.
+func Ptr[T any](v T) *T { return &v }
+
+// Datasource returns a portable ${datasource}-variable reference for the given plugin type.
+func Datasource(dsType string) dashboard.DataSourceRef {
+	return dashboard.DataSourceRef{Type: Ptr(dsType), Uid: Ptr("${datasource}")}
+}
+
+// TimeSeries builds a "value over time" panel — the shape shared by latency,
+// traffic, and error-rate panels. Reuse it for every rate/gauge-over-time metric
+// instead of writing a new builder chain per panel.
+func TimeSeries(title, expr, legend, unit string, ds dashboard.DataSourceRef) *timeseries.PanelBuilder {
+	return timeseries.NewPanelBuilder().
+		Title(title).
+		Datasource(ds).
+		Unit(unit).
+		Min(0).
+		WithTarget(prometheus.NewDataqueryBuilder().Expr(expr).LegendFormat(legend))
+}
+
+// CurrentValue builds a Stat panel reduced to the latest value — reuse it for any
+// "one number that matters right now" signal.
+func CurrentValue(title, expr, unit string, ds dashboard.DataSourceRef) *stat.PanelBuilder {
+	return stat.NewPanelBuilder().
+		Title(title).
+		Datasource(ds).
+		Unit(unit).
+		ReduceOptions(common.NewReduceDataOptionsBuilder().Calcs([]string{"lastNotNull"}).Fields("").Values(false)).
+		WithTarget(prometheus.NewDataqueryBuilder().Expr(expr))
+}
+
+// WithPanels adds each panel in order and returns the builder for further chaining,
+// so a slice of panels built by a factory function can be spliced into a dashboard
+// in one call.
+func WithPanels(b *dashboard.DashboardBuilder, panels ...cog.Builder[dashboard.Panel]) *dashboard.DashboardBuilder {
+	for _, p := range panels {
+		b = b.WithPanel(p)
+	}
+	return b
+}
+GO
     cat > main.go <<'GO'
 package main
 
@@ -71,29 +128,25 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"grafana-dashboards/panels"
+
 	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
-	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
-	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 	"github.com/grafana/grafana-foundation-sdk/go/units"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func main() {
-	ds := dashboard.DataSourceRef{Type: ptr("prometheus"), Uid: ptr("${datasource}")}
+	ds := panels.Datasource("prometheus")
 
 	builder := dashboard.NewDashboardBuilder("My Dashboard").
 		Uid("my-dashboard").
 		Tags([]string{"generated"}).
 		Refresh("30s").
 		Time("now-6h", "now").
-		WithPanel(
-			timeseries.NewPanelBuilder().
-				Title("Example").
-				Datasource(ds).
-				Unit(units.Short).
-				WithTarget(prometheus.NewDataqueryBuilder().Expr("vector(1)")),
-		)
+		WithRow(dashboard.NewRowBuilder("Overview"))
+
+	builder = panels.WithPanels(builder,
+		panels.TimeSeries("Example", "vector(1)", "value", units.Short, ds).Span(24).Height(8),
+	)
 
 	dash, err := builder.Build()
 	if err != nil {

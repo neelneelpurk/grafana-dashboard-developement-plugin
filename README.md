@@ -63,6 +63,29 @@ This repo is both a plugin and a single-plugin marketplace.
 
 Or load it directly for a session: `claude --plugin-dir /path/to/this/repo`.
 
+### Install just the skills (without the plugin)
+
+Every skill under `skills/` is a self-contained [Agent Skill](https://github.com/anthropics/skills)
+(`SKILL.md` + its own `scripts/`) and can be installed on its own with the
+[`skills`](https://www.npmjs.com/package/skills) CLI, no plugin install required:
+
+```bash
+# Install every skill in this repo
+npx skills add neelneelpurk/grafana-dashboard-developement-plugin
+
+# Or install just one, e.g. only the Foundation SDK builder skill
+npx skills add neelneelpurk/grafana-dashboard-developement-plugin/skills/grafana-foundation-sdk
+```
+
+Skills reference their own scripts with paths relative to their own directory (`scripts/x.sh`)
+and reference each other with sibling-relative paths (`../grafana-foundation-sdk/scripts/x.sh`),
+so both install paths work: the whole-repo install keeps every skill's siblings in place, and a
+single-skill install still finds its own bundled scripts. A skill that depends on another skill
+(e.g. `dashboard-to-code` calling into `grafana-foundation-sdk`'s scaffold script) needs that
+sibling skill installed too — install the whole repo if you want everything wired up, or the
+Playwright/Grafana MCP servers and slash commands, which are plugin-only and not part of any
+individual skill.
+
 On enable you'll be prompted for `grafana_url`, `grafana_token`, and your preferred
 `sdk_language` (typescript / go / python). These feed the provision script and code generation.
 Two optional options let the Playwright browser reuse an existing Grafana login instead of

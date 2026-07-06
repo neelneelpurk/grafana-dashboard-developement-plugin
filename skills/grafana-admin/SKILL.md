@@ -28,8 +28,9 @@ dashboards inside it**.
 
 ## Backend A — Grafana CLI (`grafana-api.sh`) — token or basic auth
 
-`skills/grafana-admin/scripts/grafana-api.sh <action> …` (reads `grafana_url`/`grafana_token`
-plugin options, or `GRAFANA_URL`/`GRAFANA_TOKEN`, or `GRAFANA_USER`/`GRAFANA_PASSWORD`):
+`scripts/grafana-api.sh <action> …` (path relative to this skill's own directory; reads
+`grafana_url`/`grafana_token` plugin options, or `GRAFANA_URL`/`GRAFANA_TOKEN`, or
+`GRAFANA_USER`/`GRAFANA_PASSWORD`):
 
 ```bash
 grafana-api.sh create-folder "Team SRE"            # optional 2nd arg = folder uid

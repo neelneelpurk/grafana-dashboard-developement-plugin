@@ -29,7 +29,8 @@ from the rendered result, and correctness from the source.
 the visual items from JSON. Taking the screenshots is the first thing you do.
 
 - Make sure the dashboard is provisioned into Grafana. If it isn't, provision it first with
-  `skills/grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json` (uses the
+  `../grafana-foundation-sdk/scripts/provision-dashboard.sh dashboard.json` (relative to this
+  skill's own directory; uses the
   `grafana_url` / `grafana_token` plugin options). If no Grafana is running, start the bundled
   `examples/observability-stack/` (`docker compose up -d`).
 - Use **Playwright MCP** (bundled in this plugin's `.mcp.json`) — refer to it as "Playwright MCP"
@@ -56,7 +57,10 @@ the visual items from JSON. Taking the screenshots is the first thing you do.
 - Read the dashboard JSON and the SDK source. Verify, in code: every panel has a `datasource`
   and at least one target; units are set; a stable `uid` exists; template variables
   (`${datasource}`, `${job}`) are used instead of hard-coded datasources; `rate()` windows and
-  aggregations are sane; no obviously high-cardinality unbounded queries.
+  aggregations are sane; no obviously high-cardinality unbounded queries; repeated panel shapes
+  are factored into reusable functions rather than copy-pasted builder chains (Go: a `panels`
+  package per the `grafana-foundation-sdk` skill's reference.md, TS/Python: an equivalent
+  factory module).
 
 ### 3. Answer the rubric
 
